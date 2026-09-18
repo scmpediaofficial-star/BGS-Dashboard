@@ -89,7 +89,10 @@ export async function configureScheduler(appUrl: string): Promise<ActionResult> 
     const { profile } = await requireCapability("settings.manage");
     const url = z.url().parse(appUrl).replace(/\/+$/, "");
     const db = createAdminClient();
-    check(await db.rpc("configure_scheduler", { app_url: url, secret: cronSecret() }));
+    // Local development: pg_net runs inside Supabase's Docker network, where "localhost" is the
+    // container itself. Docker Desktop exposes the host machine as host.docker.internal.
+    const reachable = url.replace(/^(https?:\/\/)(localhost|127\.0\.0\.1)(?=[:/]|$)/, "$1host.docker.internal");
+    check(await db.rpc("configure_scheduler", { app_url: reachable, secret: cronSecret() }));
     await saveSetting("scheduler", { enabled: true, app_url: url, configured_at: new Date().toISOString() }, profile.id);
     await recordEvent({ actor: { id: profile.id, name: profile.full_name }, action: "settings.scheduler_enabled", category: "system", summary: "enabled scheduled publishing and daily briefings", link: "/settings", audience: "admins", importance: "high", tone: "good" });
     revalidatePath("/", "layout"); return undefined;
