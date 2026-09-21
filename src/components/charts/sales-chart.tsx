@@ -10,7 +10,7 @@ export type SalesPoint = { day: string; label: string; sold: number; total: numb
 export function SalesChart({ points, target }: { points: SalesPoint[]; target: number | null }) {
   const max = Math.max(target ?? 0, points.at(-1)?.total ?? 0);
   return (
-    <div className="h-56 w-full">
+    <div className="h-56 w-full min-w-0">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={points} margin={{ top: 16, right: 8, bottom: 0, left: -14 }}>
           <defs>

@@ -23,7 +23,7 @@ export function DeadlineChart({ buckets, className }: { buckets: DeadlineBucket[
       footer={<Legend className="mt-3" items={[{ label: "Completed", color: DONE }, { label: "Open", color: OPEN }]} />}
     >
       {/* Height includes the x-axis band so the card never scrolls internally. */}
-      <div className="h-60 w-full">
+      <div className="h-60 w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={buckets} margin={{ top: 30, right: 4, bottom: 0, left: -22 }} barCategoryGap="28%">
             <CartesianGrid vertical={false} strokeDasharray="0" />

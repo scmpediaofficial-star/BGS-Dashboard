@@ -15,7 +15,8 @@ export function CardHeader({ title, description, action, className, ...props }: 
   return (
     <header className={cn("flex items-start justify-between gap-3 px-5 pt-4.5 pb-1", className)} {...props}>
       <div className="min-w-0">
-        <h2 className="truncate text-[15px] font-bold text-ink">{title}</h2>
+        {/* Wraps on phones — a card title beside an action has too little room to truncate without cutting a word. */}
+        <h2 className="text-[15px] font-bold text-ink sm:truncate">{title}</h2>
         {description && <p className="mt-0.5 text-[12.5px] text-ink-3">{description}</p>}
       </div>
       {action && <div className="flex shrink-0 items-center gap-1.5">{action}</div>}

@@ -228,6 +228,14 @@
     text-size-adjust: 100%;
     scroll-behavior: smooth;
   }
+  /* A grid with no explicit columns gets one implicit, auto-sized track, and an
+     auto track grows to its widest child's intrinsic width — so a child that
+     reports a fixed pixel width (a Recharts SVG) drags the whole page wider than
+     the phone. Default every grid to a track that can never exceed its container;
+     the grid-cols-* utilities sit in a later layer and still win where set. */
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
   body {
     background: var(--bg);
     color: var(--ink);
