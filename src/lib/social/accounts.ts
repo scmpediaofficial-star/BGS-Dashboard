@@ -129,7 +129,7 @@ export async function loadContext(account: Tables<"social_accounts">): Promise<{
 export async function tendAccounts(): Promise<{ renewed: number; warned: number }> {
   const admin = createAdminClient();
   const horizon = new Date(Date.now() + 7 * 86_400_000).toISOString();
-  const { data } = await admin.from("social_accounts").select("*").eq("status", "active").in("provider", ["linkedin", "threads"]).not("token_expires_at", "is", null).lt("token_expires_at", horizon);
+  const { data } = await admin.from("social_accounts").select("*").eq("status", "active").in("provider", ["linkedin", "threads", "instagram"]).not("token_expires_at", "is", null).lt("token_expires_at", horizon);
   let renewed = 0, warned = 0;
 
   for (const account of data ?? []) {

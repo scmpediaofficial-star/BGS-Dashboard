@@ -72,9 +72,19 @@ export const PROVIDERS: Record<ProviderId, ProviderInfo> = {
     },
   },
   instagram: {
-    id: "instagram", name: "Instagram", accountNoun: "professional account", color: "#e1306c", auth: "oauth", appProvider: "facebook",
+    id: "instagram", name: "Instagram", accountNoun: "professional account", color: "#e1306c", auth: "oauth",
     maxChars: 2200, maxImages: 10, maxVideos: 1, requiresMedia: true,
-    blurb: "Photos, carousels and Reels. The Instagram account must be Professional and linked to a Facebook Page.",
+    blurb: "Photos, carousels and Reels. Connects with the Instagram login itself — no Facebook Page needed. The account must be a Business or Creator account.",
+    setup: {
+      portal: "https://developers.facebook.com/apps/creation/", portalLabel: "Meta for Developers",
+      steps: [
+        "Create an app: type “Business” (use case “Other”). Then in the app's left menu, under Add products, add “Instagram” and open “API setup with Instagram business login”.",
+        `In “Set up Instagram business login” → Business login settings, add this redirect URI: ${REDIRECT}`,
+        "Copy the “Instagram app ID” and “Instagram app secret” shown on that same page (they differ from the Meta App ID) into the form below.",
+        "While the app is in development mode, add the Instagram account as an Instagram Tester (App roles → Roles → Add people → Instagram Tester) and accept the invite in Instagram: Settings → Website permissions → Apps and websites → Tester invites.",
+      ],
+      review: "In development mode only accounts listed as testers can connect — that's all the summit needs. Facebook Page admins can alternatively connect Instagram through the Facebook app; both routes work side by side.",
+    },
   },
   threads: {
     id: "threads", name: "Threads", accountNoun: "profile", color: "#101010", auth: "oauth",

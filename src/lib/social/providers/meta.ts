@@ -103,11 +103,47 @@ async function finishInstagram(base: string, token: string, containerId: string)
   return { status: "published", externalId: id, url };
 }
 
+const IG_SCOPES = ["instagram_business_basic", "instagram_business_content_publish"];
+const IG_GRAPH = "https://graph.instagram.com/v23.0";
+
 export const instagram: Provider = {
   id: "instagram",
 
+  /** "Instagram API with Instagram Login": the professional account signs in on instagram.com itself. */
+  oauth: {
+    scopes: () => IG_SCOPES,
+
+    authUrl: (app, redirectUri, state) =>
+      `https://www.instagram.com/oauth/authorize?${new URLSearchParams({ client_id: app.clientId, redirect_uri: redirectUri, response_type: "code", scope: IG_SCOPES.join(","), state, force_reauth: "true" })}`,
+
+    async exchange(app, redirectUri, code) {
+      const short = await api("https://api.instagram.com/oauth/access_token", { form: { client_id: app.clientId, client_secret: app.clientSecret, grant_type: "authorization_code", redirect_uri: redirectUri, code } });
+      const long = await api(`https://graph.instagram.com/access_token?${new URLSearchParams({ grant_type: "ig_exchange_token", client_secret: app.clientSecret, access_token: str(short.data.access_token) })}`);
+      return { accessToken: str(long.data.access_token), expiresAt: expiresIn(long.data.expires_in), scopes: IG_SCOPES, extra: { user_id: str(short.data.user_id), login: "instagram" } };
+    },
+
+    /** 60-day tokens renew themselves (allowed any time after the first 24 hours). */
+    async refresh(_app, tokens) {
+      const { data } = await api(`https://graph.instagram.com/refresh_access_token?${new URLSearchParams({ grant_type: "ig_refresh_token", access_token: tokens.accessToken })}`);
+      return { ...tokens, accessToken: str(data.access_token), expiresAt: expiresIn(data.expires_in) };
+    },
+
+    async discover(_app, tokens) {
+      const { data } = await api(`${IG_GRAPH}/me?fields=user_id,username,name,profile_picture_url,account_type`, { bearer: tokens.accessToken });
+      const username = str(data.username);
+      const type = str(data.account_type).toLowerCase();
+      if (type && !["business", "media_creator", "creator"].includes(type)) throw new ProviderError(`@${username} is a personal Instagram account. Switch it to a Business or Creator account (Instagram → Settings → Account type) and connect again.`);
+      return [{
+        provider: "instagram", externalId: str(data.user_id) || str(data.id), displayName: str(data.name) || `@${username}`, username: username || null,
+        avatarUrl: str(data.profile_picture_url) || null, accountType: "professional", profileUrl: username ? `https://www.instagram.com/${username}/` : null, tokens, meta: { login: "instagram" },
+      }];
+    },
+  },
+
   async publish(account: AccountContext, input: PublishInput, app) {
-    const base = `${graph(app)}/${account.externalId}`;
+    // Accounts connected with Instagram Login live on graph.instagram.com; ones found through a Facebook Page stay on graph.facebook.com.
+    const host = account.meta.login === "instagram" || account.tokens.extra?.login === "instagram" ? IG_GRAPH : graph(app);
+    const base = `${host}/${account.externalId}`;
     const token = account.tokens.accessToken;
     if (input.pending?.containerId) return finishInstagram(base, token, str(input.pending.containerId));
 
