@@ -28,7 +28,13 @@ export async function GET(request: NextRequest, { params }: RouteContext<"/api/s
 
   const query = request.nextUrl.searchParams;
   const denied = query.get("error_description") ?? query.get("error");
-  if (denied) return done({ error: `The network declined the connection: ${denied.slice(0, 200)}` });
+  if (denied) {
+    // LinkedIn refuses w_organization_social until the Community Management API product is approved.
+    if (provider === "linkedin" && /organization/i.test(denied)) {
+      return done({ error: "LinkedIn hasn't approved company-page posting for this app yet. Untick “Company pages” in the LinkedIn app settings and connect again — your profile will connect. Tick it once LinkedIn grants the Community Management API." });
+    }
+    return done({ error: `The network declined the connection: ${denied.slice(0, 200)}` });
+  }
 
   const pending = decryptJson<Pending>(request.cookies.get("bgs_oauth")?.value);
   const code = query.get("code");
