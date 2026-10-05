@@ -1,6 +1,6 @@
 # BGS Dashboard
 
-Planning, production and social media command centre for the **Boardroom Governance Summit** — 7 October 2026, Labadi Beach Hotel, Accra.
+Planning, production and social media command centre for the **Boardroom Governance Summit** — 12 November 2026, Labadi Beach Hotel, Accra.
 
 Next.js 16 · Supabase (Postgres, Auth, Realtime, Storage) · Resend · installable PWA · deploys to Vercel. Everything runs on free tiers.
 
@@ -33,6 +33,7 @@ Next.js 16 · Supabase (Postgres, Auth, Realtime, Storage) · Resend · installa
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes | the publishable / anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | yes | the secret / service-role key — server only |
 | `NEXT_PUBLIC_SITE_URL` | recommended | e.g. `https://dashboard.boardroomgovsummit.com` (used in emails) |
+| `PAYSTACK_SECRET_KEY` | for payments | Paystack → Settings → API Keys & Webhooks → live secret key. Server only. See *Paystack and tickets* below |
 | `RESEND_API_KEY` | for email | without it, emails are rendered and kept in Settings → Email instead of sent |
 | `EMAIL_FROM` | for email | e.g. `BGS Dashboard <alerts@boardroomgovsummit.com>` — the domain must be verified in Resend |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | for push | generate with `npx web-push generate-vapid-keys` |
@@ -40,6 +41,16 @@ Next.js 16 · Supabase (Postgres, Auth, Realtime, Storage) · Resend · installa
 | `SETUP_SECRET` | optional | if set, `/setup` asks for it |
 
 The Vercel ⇄ Supabase integration's variable names are also recognised.
+
+## Paystack and tickets
+
+**Payments** (Commercial → Payments, managers and above) is Paystack inside the dashboard: transactions, customers, refunds, payouts, disputes and payment pages, read live with `PAYSTACK_SECRET_KEY`.
+
+- **Every successful payment becomes a paid sale, and every paid sale gets its tickets.** *Sync tickets* does it on demand; with the scheduler on it also happens by itself every five minutes. For instant updates set Paystack's webhook URL (Settings → API Keys & Webhooks) to `<your site>/api/paystack/webhook` — requests are verified with the secret key.
+- **Customers:** add one, correct their details, whitelist or blacklist them, send a payment link, or record a sale for them. A sale recorded as paid outside Paystack (bank transfer, cheque, cash) adds the buyer to Paystack automatically, so everyone who has paid has a customer code.
+- **Refunds** (admins) are sent to Paystack; when a payment is fully reversed its sale turns *Refunded* and its tickets *Void*.
+- **Tickets** (Commercial → Tickets & access): one per person, each with a unique number (`BGS-XXXX-XXXX`), in three kinds — ticket holders (paid), delegates (chairperson, panel members, moderators, guests) and complimentary (named, or blank in batches). Download any ticket, or everything on screen, as PNG or PDF; the artwork is `public/brand/ticket-template.jpg`.
+- **Attendees so far** on the overview and the tickets page counts issued tickets: ticket holders, delegates, complimentary, and the total both without and with complimentary.
 
 ## Connecting social channels
 

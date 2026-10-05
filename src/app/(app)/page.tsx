@@ -8,11 +8,13 @@ import { Legend, SegmentedBar } from "@/components/charts/segmented-bar";
 import { StatTile } from "@/components/charts/stat-tile";
 import { ActivityFeed } from "@/components/activity/activity-feed";
 import { GettingStarted, type SetupStep } from "@/components/overview/getting-started";
+import { AttendanceSummary } from "@/components/tickets/attendance-summary";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmptyState, Meter } from "@/components/ui/misc";
+import { getAttendance } from "@/lib/attendance";
 import { can, hasRole } from "@/lib/auth/permissions";
 import { requireSession } from "@/lib/auth/session";
 import { ACTION_STATUS, DELIVERABLE_PROGRESS_ORDER, DELIVERABLE_STATUS, OUTREACH_STATUS, PANELIST_STATUS } from "@/lib/domain";
@@ -40,8 +42,9 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
   const today = isoDay();
 
-  const [settings, workstreams, deliverables, panels, panelists, outreach, sponsors, sales, actions, meetings, activity, posts, accounts, team] = await Promise.all([
+  const [settings, attendance, workstreams, deliverables, panels, panelists, outreach, sponsors, sales, actions, meetings, activity, posts, accounts, team] = await Promise.all([
     getSettings(),
+    getAttendance(supabase),
     supabase.from("workstreams").select("id, slug, name").order("sort_order"),
     supabase.from("deliverables").select("id, title, status, due_date, workstream_id, responsibility, section, priority"),
     supabase.from("panels").select("id, number, title").order("number"),
@@ -166,6 +169,15 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
           caption={revenue > 0 ? `${formatMoney(revenue, targets.currency, true)} recorded` : "No sales recorded yet"}
         />
       </section>
+
+      {/* ── Attendees so far ─────────────────────────────────────────────── */}
+      <div>
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="text-[15px] font-bold text-ink">Attendees so far</h2>
+          <Link href="/tickets" className="text-xs font-semibold text-accent-ink hover:underline">Open tickets</Link>
+        </div>
+        <AttendanceSummary attendance={attendance} capacity={targets.tickets} linked />
+      </div>
 
       {/* ── Progress + deadlines ─────────────────────────────────────────── */}
       <div className="grid gap-5 lg:gap-6 xl:grid-cols-5">

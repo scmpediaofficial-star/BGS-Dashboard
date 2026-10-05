@@ -1,6 +1,6 @@
 import {
-  Ban, CircleCheck, CircleDashed, CircleDot, CircleX, Eye, FileEdit, Flag, Hourglass, Inbox, LoaderCircle,
-  MailCheck, Send, Signal, SignalHigh, SignalLow, SignalMedium, Sparkles, ThumbsUp, Timer, TriangleAlert, Handshake,
+  Ban, CircleCheck, CircleDashed, CircleDot, CircleX, DoorOpen, Eye, FileEdit, Flag, Hourglass, Inbox, LoaderCircle,
+  MailCheck, MicVocal, Send, Signal, SignalHigh, SignalLow, SignalMedium, Sparkles, ThumbsUp, Ticket, Timer, TriangleAlert, Handshake, Undo2,
   type LucideIcon,
 } from "lucide-react";
 import type { Tone } from "@/components/ui/badge";
@@ -97,6 +97,41 @@ export const TICKET_CHANNELS = [
   { value: "other", label: "Other" },
 ] as const;
 
+export type TicketKind = "paid" | "delegate" | "complimentary";
+export const TICKET_KIND: Record<TicketKind, Meta> = {
+  paid: { label: "Ticket holder", tone: "accent", icon: Ticket, color: "var(--chart-1)" },
+  delegate: { label: "Delegate", tone: "navy", icon: MicVocal, color: "var(--chart-2)" },
+  complimentary: { label: "Complimentary", tone: "gold", icon: Sparkles, color: "var(--chart-3)" },
+};
+export const TICKET_KIND_ORDER: TicketKind[] = ["paid", "delegate", "complimentary"];
+
+export type TicketStatus = "valid" | "checked_in" | "void";
+export const TICKET_STATUS: Record<TicketStatus, Meta> = {
+  valid: { label: "Valid", tone: "good", icon: CircleCheck, color: "var(--good)" },
+  checked_in: { label: "Checked in", tone: "accent", icon: DoorOpen, color: "var(--accent)" },
+  void: { label: "Void", tone: "critical", icon: Ban, color: "var(--critical)" },
+};
+export const TICKET_STATUS_ORDER: TicketStatus[] = ["valid", "checked_in", "void"];
+
+/** How a delegate is taking part. Free text is allowed; these are the suggestions. */
+export const DELEGATE_ROLES = ["Chairperson", "Convener", "Keynote speaker", "Panel member", "Moderator", "Master of ceremonies", "Special guest", "Sponsor representative", "Organising team", "Media"] as const;
+
+/** Paystack's own words for a payment, a refund, a payout and a dispute. */
+export type PaystackState = "success" | "failed" | "abandoned" | "reversed" | "pending" | "processing" | "processed" | "ongoing" | "queued";
+export const PAYSTACK_STATE: Record<PaystackState, Meta> = {
+  success: { label: "Success", tone: "good", icon: CircleCheck, color: "var(--good)" },
+  processed: { label: "Processed", tone: "good", icon: CircleCheck, color: "var(--good)" },
+  failed: { label: "Failed", tone: "critical", icon: CircleX, color: "var(--critical)" },
+  abandoned: { label: "Abandoned", tone: "neutral", icon: CircleDashed, color: "var(--neutral)" },
+  reversed: { label: "Reversed", tone: "serious", icon: Undo2, color: "var(--serious)" },
+  pending: { label: "Pending", tone: "warning", icon: Hourglass, color: "var(--warning)" },
+  processing: { label: "Processing", tone: "warning", icon: LoaderCircle, color: "var(--warning)" },
+  ongoing: { label: "Ongoing", tone: "warning", icon: Timer, color: "var(--warning)" },
+  queued: { label: "Queued", tone: "neutral", icon: Hourglass, color: "var(--neutral)" },
+};
+export const paystackState = (status: string | null | undefined): Meta =>
+  PAYSTACK_STATE[(status ?? "") as PaystackState] ?? { label: status ? status.replace(/[-_]/g, " ").replace(/^./, (c) => c.toUpperCase()) : "Unknown", tone: "neutral", icon: CircleDashed, color: "var(--neutral)" };
+
 export const OVERDUE: Meta = { label: "Overdue", tone: "critical", icon: Flag, color: "var(--critical)" };
 
 /** Categorical chart slots (validated order — see globals.css). */
@@ -124,7 +159,7 @@ export const DEFAULT_EVENT: EventSettings = {
   short_name: "BGS 2026",
   theme: "Board Committees: From Oversight to Impact",
   tagline: "Shaping accountability in the boardrooms",
-  starts_at: "2026-10-07T08:00:00+00:00",
+  starts_at: "2026-11-12T08:00:00+00:00",
   venue: "Labadi Beach Hotel",
   city: "Accra, Ghana",
   convener: "Prof. Douglas Boateng",

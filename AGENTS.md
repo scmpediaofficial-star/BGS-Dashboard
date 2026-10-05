@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # BGS Dashboard — project guide
 
-Planning, production and social command centre for the **Boardroom Governance Summit** (7 Oct 2026, Labadi Beach Hotel, Accra).
+Planning, production and social command centre for the **Boardroom Governance Summit** (12 Nov 2026, Labadi Beach Hotel, Accra).
 Next.js 16.3 App Router · Supabase (Postgres, Auth, Realtime, Storage) · Resend · PWA · deployed on Vercel.
 
 ## Run it
@@ -37,6 +37,8 @@ npx tsc --noEmit      # typecheck — must stay clean
 | Status vocabularies | `src/lib/domain.ts` | Label + tone + icon + chart colour for every enum. Status is never shown by colour alone: always `<Badge tone icon>` or `<StatusMenu>`. |
 | Dates & numbers | `src/lib/utils.ts` | Always `formatDate`, `formatDateTime`, `relativeDay`, `timeAgo`, `formatMoney`, `isoDay()` — they pin the Accra timezone so server and client render identically. Never `toLocaleDateString()`. |
 | Settings | `src/lib/settings.ts` | `getSettings()` / `saveSetting()`; event facts live in `app_settings`, not in code. |
+| Paystack | `src/lib/paystack.ts`, `paystack-sync.ts` | Called with `PAYSTACK_SECRET_KEY`, so RLS does not apply: check a `payments.*` capability first, and return only the trimmed shapes from `paystack.ts`. `syncPaystackSales()` turns each successful payment into one `ticket_sales` row (unique on `paystack_id`); the manual button, `/api/paystack/webhook` and the scheduler all call it. |
+| Tickets | `supabase/migrations/*_paystack_tickets.sql`, `src/components/tickets/ticket-art.ts` | One `tickets` row per person admitted (`paid`, `delegate`, `complimentary`), each with a unique code. Paid tickets are issued and voided by the `sync_sale_tickets` trigger as their sale changes — never insert them by hand. The e-ticket (PNG/PDF) is drawn in the browser on `public/brand/ticket-template.jpg`. Headcounts come from `getAttendance()`. |
 | Email | `src/lib/email/templates.ts`, `send.ts` | Hand-built table HTML (React Email is deprecated). Without `RESEND_API_KEY` mail is logged to `email_log` as `skipped`, with its HTML, instead of sent. |
 
 ## UI conventions

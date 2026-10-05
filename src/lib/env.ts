@@ -30,6 +30,8 @@ export function serverEnv() {
     emailReplyTo: first(process.env.EMAIL_REPLY_TO),
     vapidPrivateKey: first(process.env.VAPID_PRIVATE_KEY) ?? "",
     vapidSubject: first(process.env.VAPID_SUBJECT) ?? "mailto:info@boardroomgovsummit.com",
+    paystackSecretKey: first(process.env.PAYSTACK_SECRET_KEY) ?? "",
+    paystackApiUrl: (first(process.env.PAYSTACK_API_URL) ?? "https://api.paystack.co").replace(/\/+$/, ""),
   };
 }
 

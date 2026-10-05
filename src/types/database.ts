@@ -1262,6 +1262,8 @@ export type Database = {
           notes: string | null
           organization: string | null
           payment_status: Database["public"]["Enums"]["payment_status"]
+          paystack_customer_code: string | null
+          paystack_id: number | null
           quantity: number
           recorded_by: string | null
           reference: string | null
@@ -1284,6 +1286,8 @@ export type Database = {
           notes?: string | null
           organization?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          paystack_customer_code?: string | null
+          paystack_id?: number | null
           quantity?: number
           recorded_by?: string | null
           reference?: string | null
@@ -1306,6 +1310,8 @@ export type Database = {
           notes?: string | null
           organization?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          paystack_customer_code?: string | null
+          paystack_id?: number | null
           quantity?: number
           recorded_by?: string | null
           reference?: string | null
@@ -1369,6 +1375,88 @@ export type Database = {
         }
         Relationships: []
       }
+      tickets: {
+        Row: {
+          checked_in_at: string | null
+          code: string
+          created_at: string
+          holder_email: string | null
+          holder_name: string | null
+          holder_phone: string | null
+          id: string
+          issued_by: string | null
+          kind: string
+          notes: string | null
+          organization: string | null
+          panelist_id: string | null
+          role_label: string | null
+          sale_id: string | null
+          seq: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          checked_in_at?: string | null
+          code?: string
+          created_at?: string
+          holder_email?: string | null
+          holder_name?: string | null
+          holder_phone?: string | null
+          id?: string
+          issued_by?: string | null
+          kind: string
+          notes?: string | null
+          organization?: string | null
+          panelist_id?: string | null
+          role_label?: string | null
+          sale_id?: string | null
+          seq?: never
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          checked_in_at?: string | null
+          code?: string
+          created_at?: string
+          holder_email?: string | null
+          holder_name?: string | null
+          holder_phone?: string | null
+          id?: string
+          issued_by?: string | null
+          kind?: string
+          notes?: string | null
+          organization?: string | null
+          panelist_id?: string | null
+          role_label?: string | null
+          sale_id?: string | null
+          seq?: never
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_panelist_id_fkey"
+            columns: ["panelist_id"]
+            isOneToOne: true
+            referencedRelation: "panelists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workstreams: {
         Row: {
           color_slot: number
@@ -1421,6 +1509,7 @@ export type Database = {
         Args: { min_role: Database["public"]["Enums"]["user_role"] }
         Returns: boolean
       }
+      new_ticket_code: { Args: never; Returns: string }
       role_rank: {
         Args: { r: Database["public"]["Enums"]["user_role"] }
         Returns: number

@@ -15,12 +15,12 @@ export const ROLE_META: Record<Role, { label: string; summary: string; can: stri
   admin: {
     label: "Admin",
     summary: "Runs the workspace: people, integrations and settings.",
-    can: ["Invite people and assign roles", "Connect social accounts and developer apps", "Change event settings, scheduler and email"],
+    can: ["Invite people and assign roles", "Connect social accounts and developer apps", "Change event settings, scheduler and email", "Refund Paystack payments"],
   },
   manager: {
     label: "Manager",
     summary: "Leads delivery. Approves and publishes.",
-    can: ["Approve, schedule and publish social posts", "Record ticket sales and send virtual access", "Delete records"],
+    can: ["Approve, schedule and publish social posts", "Record ticket sales, issue tickets and work with Paystack payments", "Delete records"],
   },
   contributor: {
     label: "Contributor",
@@ -44,6 +44,9 @@ export const CAPABILITIES = {
   "records.delete": "manager",
   "comments.write": "contributor",
   "tickets.manage": "manager",
+  "payments.view": "manager",
+  "payments.manage": "manager",
+  "payments.refund": "admin",
   "social.draft": "contributor",
   "social.publish": "manager",
   "social.accounts": "admin",

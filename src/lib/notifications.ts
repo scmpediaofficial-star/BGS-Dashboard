@@ -5,7 +5,7 @@ export const CATEGORIES = {
   programme: { label: "Panels & speakers", description: "Panelists added, confirmed or declined; questions and citations." },
   outreach: { label: "Outreach", description: "Invitation letters, embassies and institutions." },
   sponsorship: { label: "Sponsorship", description: "Pipeline movement and confirmed sponsors." },
-  tickets: { label: "Tickets & virtual access", description: "Sales recorded and access codes sent." },
+  tickets: { label: "Tickets & virtual access", description: "Sales and Paystack payments, tickets issued, refunds and access codes." },
   meetings: { label: "Meetings & actions", description: "Meetings, minutes and action points." },
   social: { label: "Social Studio", description: "Approvals, scheduled posts, publishing results and account health." },
   team: { label: "Team & access", description: "Invitations, role changes and deactivations." },
