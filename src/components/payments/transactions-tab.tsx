@@ -9,6 +9,7 @@ import { copyText, StateBadge } from "@/components/payments/shared";
 import type { LedgerSale, PaymentsData, PaystackPayment } from "@/components/payments/types";
 import { useViewer } from "@/components/shell/session-context";
 import { useAction } from "@/components/shared/use-action";
+import { TicketDownload } from "@/components/tickets/ticket-download";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -52,7 +53,7 @@ export function TransactionsTab({ data, setParams, onSync, syncing }: Props) {
   const ledgerOf = (p: PaystackPayment): LedgerSale | undefined => data.ledgerByPayment[String(p.id)];
   const ledgerCell = (p: PaystackPayment) => {
     const sale = ledgerOf(p);
-    if (sale) return sale.status === "paid" ? <Badge tone="good" icon={Ticket} size="sm">{sale.codes.length === 1 ? sale.codes[0] : pluralize(sale.codes.length, "ticket")}</Badge> : <Badge tone={PAYMENT_STATUS[sale.status].tone} icon={PAYMENT_STATUS[sale.status].icon} size="sm">{PAYMENT_STATUS[sale.status].label}</Badge>;
+    if (sale) return sale.status === "paid" && sale.tickets.length ? <span className="inline-flex flex-wrap items-center gap-2"><Badge tone="good" icon={Ticket} size="sm">{sale.codes.length === 1 ? sale.codes[0] : pluralize(sale.codes.length, "ticket")}</Badge><TicketDownload tickets={sale.tickets} event={data.event} /></span> : <Badge tone={PAYMENT_STATUS[sale.status].tone} icon={PAYMENT_STATUS[sale.status].icon} size="sm">{PAYMENT_STATUS[sale.status].label}</Badge>;
     return p.status === "success" ? <Badge tone="warning" icon={Ticket} size="sm">Not imported</Badge> : <span className="text-ink-3">—</span>;
   };
   const sale = selected ? ledgerOf(selected) : undefined;
@@ -141,8 +142,11 @@ export function TransactionsTab({ data, setParams, onSync, syncing }: Props) {
                     <Badge tone={PAYMENT_STATUS[sale.status].tone} icon={PAYMENT_STATUS[sale.status].icon}>{PAYMENT_STATUS[sale.status].label}</Badge>
                     {sale.codes.map((code) => <span key={code} className="rounded-lg bg-surface-3 px-2 py-1 font-mono text-xs font-bold text-ink">{code}</span>)}
                   </div>
-                  <p className="mt-2 text-xs text-ink-3">{sale.codes.length ? "Open the sale to download the ticket as a PNG or PDF." : "This sale has no valid tickets."}</p>
-                  <Button asChild variant="outline" size="sm" className="mt-2.5"><Link href={`/tickets?tab=sales&item=${sale.id}`}><Ticket /> Open sale and tickets</Link></Button>
+                  {!sale.codes.length && <p className="mt-2 text-xs text-ink-3">This sale has no valid tickets.</p>}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <TicketDownload variant="button" tickets={sale.tickets} event={data.event} />
+                    <Button asChild variant="outline"><Link href={`/tickets?tab=sales&item=${sale.id}`}><Ticket /> Open sale</Link></Button>
+                  </div>
                 </>
               ) : selected.status === "success" ? (
                 <>

@@ -1,3 +1,5 @@
+import type { TicketEvent } from "@/components/tickets/ticket-art";
+import type { TicketLike } from "@/components/tickets/ticket-download";
 import type { PaymentStatus } from "@/lib/domain";
 import type { PaystackBalance, PaystackCustomer, PaystackDispute, PaystackPage, PaystackPayment, PaystackPayout, PaystackRefund } from "@/lib/paystack";
 
@@ -6,7 +8,7 @@ export type PaymentTab = (typeof PAYMENT_TABS)[number];
 export const TAB_LABEL: Record<PaymentTab, string> = { transactions: "Transactions", customers: "Customers", refunds: "Refunds", payouts: "Payouts", disputes: "Disputes", pages: "Payment pages" };
 
 /** What the ticket ledger holds for a Paystack payment or customer. */
-export type LedgerSale = { id: string; status: PaymentStatus; buyer: string; codes: string[] };
+export type LedgerSale = { id: string; status: PaymentStatus; buyer: string; codes: string[]; /** Live tickets of the sale, ready to download. */ tickets: TicketLike[] };
 
 export type PaymentsData = {
   mode: "live" | "test";
@@ -23,6 +25,8 @@ export type PaymentsData = {
   /** Keyed by customer code and by lower-cased email. */
   ledgerByCustomer: Record<string, LedgerSale[]>;
   ticket: { price: number | null; currency: string };
+  /** Date and venue lines printed on the e-ticket. */
+  event: TicketEvent;
 };
 
 export type { PaystackCustomer, PaystackDispute, PaystackPage, PaystackPayment, PaystackPayout, PaystackRefund };

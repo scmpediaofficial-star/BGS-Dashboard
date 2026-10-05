@@ -9,6 +9,7 @@ import { copyText, StateBadge } from "@/components/payments/shared";
 import type { PaymentsData, PaystackCustomer } from "@/components/payments/types";
 import { useViewer } from "@/components/shell/session-context";
 import { useAction } from "@/components/shared/use-action";
+import { TicketDownload } from "@/components/tickets/ticket-download";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -55,6 +56,7 @@ export function CustomersTab({ data, setParams }: Props) {
     return [...sales.values()];
   };
   const codesOf = (c: PaystackCustomer) => ticketsOf(c).flatMap((s) => s.codes);
+  const heldBy = (c: PaystackCustomer) => ticketsOf(c).flatMap((s) => s.tickets);
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -73,7 +75,7 @@ export function CustomersTab({ data, setParams }: Props) {
 
   const statusCell = (c: PaystackCustomer) => {
     const codes = codesOf(c);
-    if (codes.length) return <Badge tone="good" icon={Ticket} size="sm">{codes.length === 1 ? codes[0] : pluralize(codes.length, "ticket")}</Badge>;
+    if (codes.length) return <span className="inline-flex flex-wrap items-center gap-2"><Badge tone="good" icon={Ticket} size="sm">{codes.length === 1 ? codes[0] : pluralize(codes.length, "ticket")}</Badge><TicketDownload tickets={heldBy(c)} event={data.event} /></span>;
     if (paidBy.has(c.code)) return <Badge tone="warning" icon={Ticket} size="sm">Paid · no ticket yet</Badge>;
     return <Badge tone="neutral" icon={CircleDashed} size="sm">No payment</Badge>;
   };
@@ -197,8 +199,11 @@ export function CustomersTab({ data, setParams }: Props) {
               <div className="mt-5 border-t border-line pt-4">
                 <p className="text-xs font-bold text-ink">Tickets</p>
                 <ul className="mt-2 grid gap-2">
-                  {ticketsOf(selected).filter((s) => s.codes.length).map((s) => (
-                    <li key={s.id}><Link href={`/tickets?tab=sales&item=${s.id}`} className="flex flex-wrap items-center gap-2 rounded-xl border border-line px-3 py-2 transition-colors hover:bg-surface-2">{s.codes.map((code) => <span key={code} className="font-mono text-xs font-bold text-ink">{code}</span>)}<span className="ml-auto text-xs font-semibold text-accent-ink">Open to download</span></Link></li>
+                  {heldBy(selected).map((t) => (
+                    <li key={t.code} className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2">
+                      <span className="min-w-0"><span className="block font-mono text-[13px] font-bold text-ink">{t.code}</span><span className="block truncate text-xs text-ink-3">{t.holder_name ?? "No name"}</span></span>
+                      <TicketDownload ticket={t} event={data.event} />
+                    </li>
                   ))}
                 </ul>
               </div>

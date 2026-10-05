@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { TicketsView } from "@/components/tickets/tickets-view";
 import type { Sale, TicketRow } from "@/components/tickets/types";
-import { getAttendance, moderatorName } from "@/lib/attendance";
+import { getAttendance, moderatorName, ticketEvent } from "@/lib/attendance";
 import { requireSession, type Session } from "@/lib/auth/session";
 import { getSettings } from "@/lib/settings";
-import { EVENT_TZ } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Tickets & access" };
 
@@ -43,12 +42,6 @@ export default async function TicketsPage() {
     if (moderator && !names.has(moderator)) waiting.add(moderator);
   }
 
-  const { event } = settings;
-  const ticketEvent = {
-    dateLine: new Intl.DateTimeFormat("en-GB", { timeZone: EVENT_TZ, day: "numeric", month: "long", year: "numeric" }).format(new Date(event.starts_at)),
-    venueLine: `${event.venue}, ${event.city}`,
-  };
-
   return (
     <TicketsView
       ticketTypes={types.data ?? []}
@@ -56,7 +49,7 @@ export default async function TicketsPage() {
       tickets={tickets}
       attendance={attendance}
       programmePending={waiting.size}
-      event={ticketEvent}
+      event={ticketEvent(settings.event)}
       virtual={settings.virtual}
       targets={settings.targets}
     />

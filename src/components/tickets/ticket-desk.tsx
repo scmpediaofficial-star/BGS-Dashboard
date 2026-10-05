@@ -196,7 +196,7 @@ export function TicketDesk({ tickets, event, programmePending }: { tickets: Tick
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-xs">
                 <thead className="bg-surface-2 text-[11px] uppercase tracking-wider text-ink-3">
-                  <tr><th className="px-5 py-3">Ticket no.</th><th className="px-3 py-3">Holder</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Issued</th><th className="px-5 py-3 text-right">Ticket</th></tr>
+                  <tr><th className="px-5 py-3">Ticket no.</th><th className="px-3 py-3">Holder</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Issued</th><th className="px-5 py-3 text-right">E-ticket</th></tr>
                 </thead>
                 <tbody className="divide-y divide-line">
                   {visible.map((t) => (
@@ -206,7 +206,7 @@ export function TicketDesk({ tickets, event, programmePending }: { tickets: Tick
                       <td className="px-3 py-3"><Badge tone={TICKET_KIND[t.kind].tone} icon={TICKET_KIND[t.kind].icon}>{kindLabel(t)}</Badge></td>
                       <td className="px-3 py-3"><StatusMenu value={t.status} meta={TICKET_STATUS} order={TICKET_STATUS_ORDER} label={`Ticket ${t.code}`} disabled={!manage} onChange={(next) => changeStatus(t.id, next)} /></td>
                       <td className="px-3 py-3 text-ink-3">{formatDate(t.created_at)}</td>
-                      <td className="px-5 py-2 text-right"><TicketDownload ticket={t} event={event} /></td>
+                      <td className="px-5 py-2 text-right">{t.status === "void" ? <span className="text-ink-3">—</span> : <TicketDownload ticket={t} event={event} />}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -220,7 +220,7 @@ export function TicketDesk({ tickets, event, programmePending }: { tickets: Tick
                       <span className={t.holder_name ? "block truncate text-[13px] font-bold text-ink" : "block truncate text-[13px] text-ink-3"}>{holderLabel(t)}</span>
                       <span className="mt-0.5 block font-mono text-xs font-semibold text-ink-2">{t.code}</span>
                     </button>
-                    <TicketDownload ticket={t} event={event} />
+                    {t.status !== "void" && <TicketDownload ticket={t} event={event} />}
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <Badge tone={TICKET_KIND[t.kind].tone} icon={TICKET_KIND[t.kind].icon} size="sm">{kindLabel(t)}</Badge>

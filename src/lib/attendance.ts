@@ -1,7 +1,17 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { EventSettings } from "@/lib/domain";
+import { EVENT_TZ } from "@/lib/utils";
 import type { Database } from "@/types/database";
+
+/** The date and venue lines printed on every e-ticket, from the event settings. */
+export function ticketEvent(event: EventSettings): { dateLine: string; venueLine: string } {
+  return {
+    dateLine: new Intl.DateTimeFormat("en-GB", { timeZone: EVENT_TZ, day: "numeric", month: "long", year: "numeric" }).format(new Date(event.starts_at)),
+    venueLine: `${event.venue}, ${event.city}`,
+  };
+}
 
 /**
  * The person named in a panel's free-text moderator field, or null when nobody
