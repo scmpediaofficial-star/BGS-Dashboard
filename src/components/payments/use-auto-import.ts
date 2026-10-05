@@ -8,12 +8,13 @@ import { checkForPayments } from "@/app/(app)/payments/actions";
  * While this screen is open and visible, asks the server once a minute to bring
  * in new Paystack payments, and refreshes when something arrived — so a ticket
  * appears on its own shortly after someone pays. The server keeps all open
- * screens to about one Paystack request a minute between them.
+ * screens to about one Paystack request a minute between them. Pass 0 to switch it off.
  */
 export function useAutoImport(everyMs = 60_000) {
   const router = useRouter();
 
   useEffect(() => {
+    if (!everyMs) return; // switched off in Settings
     let stopped = false;
     const check = async () => {
       if (document.visibilityState !== "visible" || !navigator.onLine) return;

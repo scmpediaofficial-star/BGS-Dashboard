@@ -11,6 +11,22 @@ import type { Json } from "@/types/database";
 export type EmailVolume = "all" | "important";
 export type QueueSettings = { timezone: string; slots: string[]; days: number[] };
 export type VirtualSettings = { join_url: string | null; meeting_id: string | null };
+/** Who hears about money coming in or going back. "none" still writes the activity log. */
+export type AlertAudience = "team" | "managers" | "admins";
+export type TicketSettings = {
+  /** Count complimentary tickets nobody has been named on in "total with complimentary". */
+  count_blank_complimentary: boolean;
+  /** Alert when a Paystack payment arrives, and when one is refunded or reversed. */
+  payment_alerts: boolean;
+  refund_alerts: boolean;
+  alert_audience: AlertAudience;
+  /** Bring Paystack payments into the ledger without anyone pressing Sync. */
+  auto_import: boolean;
+  /** Add a buyer who paid outside Paystack to Paystack, so they get a customer code. */
+  auto_customers: boolean;
+  /** The small line above the name on a paid ticket. */
+  admit_label: string;
+};
 
 export type AppSettings = {
   event: EventSettings;
@@ -20,6 +36,7 @@ export type AppSettings = {
   social_queue: QueueSettings;
   email: { volume: EmailVolume };
   virtual: VirtualSettings;
+  tickets: TicketSettings;
   scheduler: { enabled: boolean; app_url: string | null; configured_at: string | null };
 };
 
@@ -31,6 +48,7 @@ const DEFAULTS: AppSettings = {
   social_queue: { timezone: "Africa/Accra", slots: ["08:30", "12:30", "17:30"], days: [0, 1, 2, 3, 4, 5, 6] },
   email: { volume: "all" },
   virtual: { join_url: null, meeting_id: null },
+  tickets: { count_blank_complimentary: true, payment_alerts: true, refund_alerts: true, alert_audience: "team", auto_import: true, auto_customers: true, admit_label: "Admit one" },
   scheduler: { enabled: false, app_url: null, configured_at: null },
 };
 

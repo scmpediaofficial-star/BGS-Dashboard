@@ -38,6 +38,38 @@ export async function saveTargets(input: Record<string, unknown>): Promise<Actio
   }, "Targets saved");
 }
 
+const ticketSettingsSchema = z.object({ capacity: f.optionalInt, count_blank_complimentary: z.boolean(), payment_alerts: z.boolean(), refund_alerts: z.boolean(),
+  alert_audience: z.enum(["team", "managers", "admins"]), auto_import: z.boolean(), auto_customers: z.boolean(), admit_label: f.text(40) });
+export async function saveTicketSettings(input: Record<string, unknown>): Promise<ActionResult> {
+  return run(async () => {
+    const { profile } = await requireCapability("settings.manage");
+    const { capacity, ...tickets } = ticketSettingsSchema.parse(input);
+    const before = await getSettings();
+    await saveSetting("tickets", tickets, profile.id);
+    // "Seats available" is the ticket target under another name: one number, two places to change it.
+    await saveSetting("targets", { ...before.targets, tickets: capacity ?? null }, profile.id);
+    await recordEvent({ actor: { id: profile.id, name: profile.full_name }, action: "settings.tickets_updated", category: "system", summary: "updated the ticket and payment settings", link: "/settings?tab=tickets", audience: "admins", importance: "normal",
+      facts: [{ label: "Seats available", value: capacity === null || capacity === undefined ? "No limit" : String(capacity) }, { label: "Payment alerts", value: tickets.payment_alerts ? "On" : "Off" }, { label: "Automatic import", value: tickets.auto_import ? "On" : "Off" }] });
+    revalidatePath("/", "layout"); return undefined;
+  }, "Ticket and payment settings saved");
+}
+
+const ticketTypesSchema = z.array(z.object({ id: f.id, name: f.text(120), price: f.optionalMoney, is_active: z.boolean() })).min(1).max(20);
+export async function saveTicketTypes(input: unknown): Promise<ActionResult> {
+  return run(async () => {
+    const { profile, supabase } = await requireCapability("settings.manage");
+    const rows = ticketTypesSchema.parse(input);
+    const existing = check(await supabase.from("ticket_types").select("id, is_virtual")) ?? [];
+    const virtual = new Map(existing.map((t) => [t.id, t.is_virtual]));
+    if (rows.some((r) => !virtual.has(r.id))) throw new ActionError("One of those ticket types no longer exists. Reload the page and try again.");
+    // Paystack payments are issued against the in-person ticket, so one must stay on sale.
+    if (!rows.some((r) => r.is_active && virtual.get(r.id) === false)) throw new ActionError("Keep at least one in-person ticket on sale: Paystack payments are issued against it.");
+    for (const row of rows) check(await supabase.from("ticket_types").update({ name: row.name, price: row.price ?? null, is_active: row.is_active }).eq("id", row.id));
+    await recordEvent({ actor: { id: profile.id, name: profile.full_name }, action: "settings.ticket_types_updated", category: "system", summary: "updated the ticket prices", link: "/settings?tab=tickets", audience: "managers", importance: "normal" });
+    revalidatePath("/", "layout"); return undefined;
+  }, "Ticket prices saved");
+}
+
 export async function saveWorkspaceLists(input: { organizations: string; sponsor_packages: string }): Promise<ActionResult> {
   return run(async () => {
     const { profile } = await requireCapability("settings.manage");

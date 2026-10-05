@@ -7,6 +7,7 @@ import { getSession, PermissionError, requireCapability } from "@/lib/auth/sessi
 import { recordEvent } from "@/lib/events";
 import { createCustomer, createPaymentLink, createRefund, getPayment, setCustomerRisk, updateCustomer } from "@/lib/paystack";
 import { autoSyncPaystack, syncPaystackSales, type SyncResult } from "@/lib/paystack-sync";
+import { getSettings } from "@/lib/settings";
 import { formatMoney, truncate } from "@/lib/utils";
 
 // Paystack is reached with the secret key, not through row-level security, so
@@ -91,8 +92,9 @@ export async function refundPayment(input: { paymentId: number; amount?: number 
     if (payment.status !== "success") throw new ActionError("Only a successful payment can be refunded.");
     if (data.amount && data.amount > payment.amount) throw new ActionError(`The refund can't be more than the ${formatMoney(payment.amount, payment.currency)} that was paid.`);
     const amount = data.amount && data.amount < payment.amount ? data.amount : null;
+    const { tickets: prefs } = await getSettings();
     await createRefund({ paymentId: payment.id, amount, currency: payment.currency, customerNote: data.customerNote, merchantNote: data.merchantNote ?? `Refunded from the BGS Dashboard by ${profile.full_name}` });
-    await recordEvent({ actor: { id: profile.id, name: profile.full_name }, action: "paystack.refund_requested", category: "tickets", importance: "high", tone: "critical",
+    await recordEvent({ actor: { id: profile.id, name: profile.full_name }, action: "paystack.refund_requested", category: "tickets", importance: "high", tone: "critical", audience: prefs.refund_alerts ? prefs.alert_audience : "none",
       summary: `refunded ${formatMoney(amount ?? payment.amount, payment.currency)} to “${truncate(payment.customer.name, 80)}” on Paystack`,
       detail: amount ? "A partial refund: the sale and its tickets stay as they are." : "A full refund: once Paystack has processed it, the sale is marked refunded and its tickets are void.",
       link: `/payments?payment=${payment.id}`, facts: [{ label: "Reference", value: payment.reference }, ...(data.merchantNote ? [{ label: "Reason", value: data.merchantNote }] : [])] });

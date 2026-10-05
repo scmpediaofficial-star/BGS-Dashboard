@@ -2,7 +2,8 @@
 
 import { useCallback, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Banknote, CircleCheck, Copy, ExternalLink, Landmark, RefreshCw, Scale, TicketX, Undo2, Wallet } from "lucide-react";
+import Link from "next/link";
+import { Banknote, CircleCheck, Copy, ExternalLink, Landmark, RefreshCw, Scale, Settings, TicketX, Undo2, Wallet } from "lucide-react";
 import { syncPayments } from "@/app/(app)/payments/actions";
 import { StatTile } from "@/components/charts/stat-tile";
 import { CustomersTab } from "@/components/payments/customers-tab";
@@ -24,7 +25,7 @@ export function PaymentsView({ tab, data, webhookUrl }: { tab: PaymentTab; data:
   const { can } = useViewer();
   // The ledger half of this page changes when a sale is recorded or a webhook lands.
   useRealtimeRefresh(["ticket_sales", "tickets"]);
-  useAutoImport();
+  useAutoImport(data.autoImport ? 60_000 : 0);
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -65,6 +66,7 @@ export function PaymentsView({ tab, data, webhookUrl }: { tab: PaymentTab; data:
         description={<>Everything on Paystack, without leaving the dashboard. Each successful payment becomes a sale and a ticket automatically. {data.mode === "test" && <Badge tone="warning" size="sm" className="ml-1 align-middle">Test mode</Badge>}</>}
         actions={
           <>
+            {can("settings.manage") && <Button asChild variant="outline"><Link href="/settings?tab=tickets"><Settings /> Settings</Link></Button>}
             <Button variant="outline" loading={refreshing} onClick={() => startRefresh(() => router.refresh())}>{!refreshing && <RefreshCw />} Refresh</Button>
             {can("payments.manage") && <Button loading={syncing} onClick={() => sync()}>{!syncing && <CircleCheck />} Sync tickets</Button>}
           </>
@@ -146,8 +148,10 @@ export function PaymentsView({ tab, data, webhookUrl }: { tab: PaymentTab; data:
       </div>
 
       <p className="mt-5 text-xs leading-relaxed text-ink-3">
-        Payments are imported and ticketed automatically: within a minute while the dashboard is open, and around the clock while the scheduler is on (Settings → Scheduler).
-        {can("settings.manage") && <>{" "}For an instant import, set the webhook URL in Paystack → Settings → API Keys &amp; Webhooks to{" "}
+        {data.autoImport
+          ? "Payments are imported and ticketed automatically: within a minute while the dashboard is open, and around the clock while the scheduler is on (Settings → Scheduler)."
+          : "Automatic import is switched off (Settings → Tickets & payments). Press Sync tickets to bring payments in."}
+        {can("settings.manage") && data.autoImport && <>{" "}For an instant import, set the webhook URL in Paystack → Settings → API Keys &amp; Webhooks to{" "}
           <button type="button" className="break-all font-mono font-semibold text-ink-2 hover:text-accent-ink" onClick={() => copyText(webhookUrl, "Webhook URL")}>{webhookUrl}</button>.</>}
       </p>
     </>

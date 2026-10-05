@@ -49,7 +49,8 @@ export default async function TicketsPage() {
       tickets={tickets}
       attendance={attendance}
       programmePending={waiting.size}
-      event={ticketEvent(settings.event)}
+      event={ticketEvent(settings.event, settings.tickets)}
+      countBlank={settings.tickets.count_blank_complimentary}
       virtual={settings.virtual}
       targets={settings.targets}
     />

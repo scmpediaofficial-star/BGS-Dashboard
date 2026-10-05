@@ -64,7 +64,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
     ]);
     // A successful payment that the ledger doesn't hold yet is imported here and now.
     let ledger = firstLedger;
-    if (payments.items.some((p) => p.status === "success" && !ledger.byPayment[String(p.id)])) {
+    if (settings.tickets.auto_import && payments.items.some((p) => p.status === "success" && !ledger.byPayment[String(p.id)])) {
       await syncPaystackSales().catch((error) => console.error("[payments] import on view failed:", error));
       ledger = await loadLedger(supabase, true);
     }
@@ -83,7 +83,8 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
       ledgerByPayment: ledger.byPayment,
       ledgerByCustomer: ledger.byCustomer,
       ticket: { price: types.data?.[0]?.price ?? null, currency: types.data?.[0]?.currency ?? "GHS" },
-      event: ticketEvent(settings.event),
+      event: ticketEvent(settings.event, settings.tickets),
+      autoImport: settings.tickets.auto_import,
     };
   } catch (error) {
     if (!(error instanceof ActionError)) throw error;

@@ -176,7 +176,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
           <h2 className="text-[15px] font-bold text-ink">Attendees so far</h2>
           <Link href="/tickets" className="text-xs font-semibold text-accent-ink hover:underline">Open tickets</Link>
         </div>
-        <AttendanceSummary attendance={attendance} capacity={targets.tickets} linked />
+        <AttendanceSummary attendance={attendance} capacity={targets.tickets} countBlank={settings.tickets.count_blank_complimentary} linked />
       </div>
 
       {/* ── Progress + deadlines ─────────────────────────────────────────── */}

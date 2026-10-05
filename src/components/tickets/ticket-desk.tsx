@@ -332,20 +332,20 @@ function TicketPreview({ face, event }: { face: TicketFace; event: TicketEvent }
   const ref = useRef<HTMLCanvasElement>(null);
   const [failed, setFailed] = useState(false);
   const { code, kind, name, organization, roleLabel } = face;
-  const { dateLine, venueLine } = event;
+  const { dateLine, venueLine, admitLabel } = event;
 
   useEffect(() => {
     let cancelled = false;
     const timer = window.setTimeout(() => {
       const canvas = ref.current;
       if (!canvas) return;
-      paintTicket(canvas, { code, kind, name, organization, roleLabel }, { dateLine, venueLine }).then(
+      paintTicket(canvas, { code, kind, name, organization, roleLabel }, { dateLine, venueLine, admitLabel }).then(
         () => { if (!cancelled) setFailed(false); },
         () => { if (!cancelled) setFailed(true); },
       );
     }, 150);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [code, kind, name, organization, roleLabel, dateLine, venueLine]);
+  }, [code, kind, name, organization, roleLabel, dateLine, venueLine, admitLabel]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-surface-2">

@@ -1,6 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Settings } from "lucide-react";
+import { useViewer } from "@/components/shell/session-context";
+import { Button } from "@/components/ui/button";
 import { useAutoImport } from "@/components/payments/use-auto-import";
 import { AttendanceSummary } from "@/components/tickets/attendance-summary";
 import { SalesLedger } from "@/components/tickets/sales-ledger";
@@ -15,10 +19,11 @@ import type { VirtualSettings } from "@/lib/settings";
 
 type Props = {
   ticketTypes: TicketType[]; sales: Sale[]; tickets: TicketRow[]; attendance: Attendance; programmePending: number;
-  event: TicketEvent; virtual: VirtualSettings; targets: Targets;
+  event: TicketEvent; countBlank: boolean; virtual: VirtualSettings; targets: Targets;
 };
 
-export function TicketsView({ ticketTypes, sales, tickets, attendance, programmePending, event, virtual, targets }: Props) {
+export function TicketsView({ ticketTypes, sales, tickets, attendance, programmePending, event, countBlank, virtual, targets }: Props) {
+  const { can } = useViewer();
   useRealtimeRefresh(["ticket_sales", "ticket_types", "tickets"]);
   useAutoImport();
   const router = useRouter();
@@ -34,8 +39,9 @@ export function TicketsView({ ticketTypes, sales, tickets, attendance, programme
 
   return (
     <>
-      <PageHeader eyebrow="Commercial" title="Tickets & access" description="Who is coming, the ticket each person holds, and the sales behind them. Every ticket has a unique number and downloads as a PNG or PDF." />
-      <AttendanceSummary attendance={attendance} capacity={targets.tickets} className="mb-5" />
+      <PageHeader eyebrow="Commercial" title="Tickets & access" description="Who is coming, the ticket each person holds, and the sales behind them. Every ticket has a unique number and downloads as a PNG or PDF."
+        actions={can("settings.manage") ? <Button asChild variant="outline"><Link href="/settings?tab=tickets"><Settings /> Ticket settings</Link></Button> : undefined} />
+      <AttendanceSummary attendance={attendance} capacity={targets.tickets} countBlank={countBlank} className="mb-5" />
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="tickets">Tickets</TabsTrigger>

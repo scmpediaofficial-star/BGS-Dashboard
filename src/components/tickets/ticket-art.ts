@@ -28,7 +28,7 @@ const INK_SOFT = "#5b5b86";
 const RULE = "#e3e3f0";
 
 export type TicketFace = { code: string; kind: TicketKind; name: string | null; organization: string | null; roleLabel: string | null };
-export type TicketEvent = { dateLine: string; venueLine: string };
+export type TicketEvent = { dateLine: string; venueLine: string; /** The small line above the name; "Admit one" unless changed in Settings. */ admitLabel?: string };
 
 type Bytes = Uint8Array<ArrayBuffer>;
 type Assets = { image: HTMLImageElement; bytes: Bytes; family: string };
@@ -76,21 +76,21 @@ function wrapTwo(ctx: CanvasRenderingContext2D, text: string, maxWidth: number):
   return best;
 }
 
-function headline(face: TicketFace): { eyebrow: string; title: string; sub: string | null } {
+function headline(face: TicketFace, admit: string): { eyebrow: string; title: string; sub: string | null } {
   const name = face.name?.trim() || null;
   const organization = face.organization?.trim() || null;
   if (face.kind === "complimentary") {
-    return name ? { eyebrow: "Complimentary · Admit one", title: name, sub: organization } : { eyebrow: "Admit one", title: "Complimentary", sub: organization };
+    return name ? { eyebrow: `Complimentary · ${admit}`, title: name, sub: organization } : { eyebrow: admit, title: "Complimentary", sub: organization };
   }
   if (face.kind === "delegate") return { eyebrow: face.roleLabel?.trim() || "Delegate", title: name ?? "Delegate", sub: organization };
-  return { eyebrow: "Admit one", title: name ?? "Ticket holder", sub: organization };
+  return { eyebrow: admit, title: name ?? "Ticket holder", sub: organization };
 }
 
 /** Draws the white panel (TICKET_W × PANEL_H) for one ticket. */
 function drawPanel(ctx: CanvasRenderingContext2D, face: TicketFace, event: TicketEvent, family: string) {
   const pad = 84;
   const inner = TICKET_W - pad * 2;
-  const { eyebrow, title, sub } = headline(face);
+  const { eyebrow, title, sub } = headline(face, event.admitLabel?.trim() || "Admit one");
 
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, TICKET_W, PANEL_H);

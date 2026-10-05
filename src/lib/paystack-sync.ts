@@ -3,6 +3,7 @@ import "server-only";
 import { ActionError } from "@/lib/actions";
 import { recordEvent, type Actor } from "@/lib/events";
 import { channelLabel, ensureCustomer, isPaystackConfigured, listPayments, type PaystackPayment } from "@/lib/paystack";
+import { getSettings } from "@/lib/settings";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatMoney, pluralize, truncate } from "@/lib/utils";
 
@@ -16,7 +17,7 @@ export type SyncResult = { payments: number; imported: number; linked: number; r
  * Never throws: a sale must save even when Paystack is unreachable.
  */
 export async function ensureSaleCustomer(saleId: string): Promise<string | null> {
-  if (!isPaystackConfigured()) return null;
+  if (!isPaystackConfigured() || !(await getSettings()).tickets.auto_customers) return null;
   const db = createAdminClient();
   const { data: sale } = await db.from("ticket_sales").select("id, buyer_name, buyer_email, buyer_phone, payment_status, paystack_customer_code").eq("id", saleId).maybeSingle();
   if (!sale) return null;
@@ -63,6 +64,8 @@ export async function lastPaystackCheck(): Promise<{ checkedAt: string | null; e
 export async function autoSyncPaystack(minSeconds = 55): Promise<SyncResult | null> {
   if (!isPaystackConfigured()) return null;
   try {
+    // Switched off in Settings → Tickets & payments: only the Sync button imports.
+    if (!(await getSettings()).tickets.auto_import) return null;
     const state = await readState();
     const last = Date.parse(state.attempted_at ?? "");
     if (Number.isFinite(last) && Date.now() - last < minSeconds * 1000) return null;
@@ -187,18 +190,23 @@ export async function syncPaystackSales(actor: Actor = null): Promise<SyncResult
     if (data?.length) refunded.push(sale);
   }
 
+  // Settings → Tickets & payments decides who is told. With alerts off the activity log still records it.
+  const { tickets: prefs } = await getSettings();
+  const paymentAudience = prefs.payment_alerts ? prefs.alert_audience : "none";
+  const refundAudience = prefs.refund_alerts ? prefs.alert_audience : "none";
+
   // A person pressing "Sync" gets one line in the log; payments that arrive on their own are announced one by one.
   if (imported.length && (actor || imported.length > 3)) {
     const total = imported.reduce((sum, sale) => sum + Number(sale.amount), 0);
     await recordEvent({
-      actor, action: "paystack.synced", category: "tickets", link: "/tickets", importance: "high", tone: "good",
+      actor, action: "paystack.synced", category: "tickets", link: "/tickets", importance: "high", tone: "good", audience: paymentAudience,
       summary: actor ? `imported ${pluralize(imported.length, "Paystack payment")}` : `${pluralize(imported.length, "Paystack payment")} imported`,
       detail: `${formatMoney(total, imported[0].currency)} across ${pluralize(imported.reduce((sum, sale) => sum + sale.quantity, 0), "ticket")}. Tickets were issued automatically.`,
     });
   } else {
     for (const sale of imported) {
       await recordEvent({
-        actor: null, action: "paystack.payment_received", category: "tickets", importance: "high", tone: "good",
+        actor: null, action: "paystack.payment_received", category: "tickets", importance: "high", tone: "good", audience: paymentAudience,
         summary: `Paystack payment received from “${truncate(sale.buyer_name, 80)}”`,
         detail: `${pluralize(sale.quantity, "ticket")} issued automatically.`,
         entity: { type: "ticket_sale", id: sale.id, label: sale.buyer_name }, link: `/tickets?item=${sale.id}`,
@@ -208,7 +216,7 @@ export async function syncPaystackSales(actor: Actor = null): Promise<SyncResult
   }
   for (const sale of refunded) {
     await recordEvent({
-      actor: null, action: "paystack.payment_reversed", category: "tickets", importance: "high", tone: "critical",
+      actor: null, action: "paystack.payment_reversed", category: "tickets", importance: "high", tone: "critical", audience: refundAudience,
       summary: `Paystack reversed the payment from “${truncate(sale.buyer_name, 80)}”`,
       detail: "The sale is marked refunded and its tickets are void.",
       entity: { type: "ticket_sale", id: sale.id, label: sale.buyer_name }, link: `/tickets?item=${sale.id}`,

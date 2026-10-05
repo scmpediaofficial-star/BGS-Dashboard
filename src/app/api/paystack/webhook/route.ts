@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { isValidWebhook } from "@/lib/paystack";
 import { syncPaystackSales } from "@/lib/paystack-sync";
+import { getSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -27,6 +28,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid payload" }, { status: 400 });
   }
   if (!RELEVANT.has(event)) return Response.json({ ok: true, ignored: event });
+  // Automatic import switched off in Settings: acknowledge, so Paystack does not keep retrying.
+  if (!(await getSettings()).tickets.auto_import) return Response.json({ ok: true, ignored: "automatic import is off" });
 
   try {
     const result = await syncPaystackSales();

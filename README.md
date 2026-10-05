@@ -50,6 +50,7 @@ The Vercel ⇄ Supabase integration's variable names are also recognised.
 - **Customers:** add one, correct their details, whitelist or blacklist them, send a payment link, or record a sale for them. A sale recorded as paid outside Paystack (bank transfer, cheque, cash) adds the buyer to Paystack automatically, so everyone who has paid has a customer code.
 - **Refunds** (admins) are sent to Paystack; when a payment is fully reversed its sale turns *Refunded* and its tickets *Void*.
 - **Tickets** (Commercial → Tickets & access): one per person, each with a unique number (`BGS-XXXX-XXXX`), in three kinds — ticket holders (paid), delegates (chairperson, panel members, moderators, guests) and complimentary (named, or blank in batches). Download any ticket, or everything on screen, as PNG or PDF; the artwork is `public/brand/ticket-template.jpg`.
+- **Settings → Tickets & payments** (admins): seats available, whether blank complimentary tickets count in the total, who is alerted about payments and refunds (or nobody), automatic import on or off, adding off-Paystack buyers as customers, the line above the name on the ticket, and ticket prices.
 - **Attendees so far** on the overview and the tickets page counts issued tickets: ticket holders, delegates, complimentary, and the total both without and with complimentary.
 
 ## Connecting social channels

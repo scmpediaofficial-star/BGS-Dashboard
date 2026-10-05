@@ -8,10 +8,20 @@ import { cn, formatNumber, pluralize } from "@/lib/utils";
  * and complimentary tickets — with the total shown both without and with the
  * complimentary ones, so the firm number and the full house are both visible.
  */
-export function AttendanceSummary({ attendance, capacity, linked, className }: { attendance: Attendance; capacity?: number | null; linked?: boolean; className?: string }) {
+type Props = {
+  attendance: Attendance;
+  /** Seats available, from Settings → Tickets & payments. */
+  capacity?: number | null;
+  /** False = only complimentary tickets with a name on them count towards the total. */
+  countBlank?: boolean;
+  linked?: boolean;
+  className?: string;
+};
+
+export function AttendanceSummary({ attendance, capacity, countBlank = true, linked, className }: Props) {
   const { paid, delegates, complimentary, complimentaryNamed } = attendance;
   const firm = paid + delegates;
-  const everyone = firm + complimentary;
+  const everyone = firm + (countBlank ? complimentary : complimentaryNamed);
   const href = (kind?: string) => (linked ? `/tickets?tab=tickets${kind ? `&kind=${kind}` : ""}` : undefined);
 
   return (
@@ -24,7 +34,7 @@ export function AttendanceSummary({ attendance, capacity, linked, className }: {
       <div className="col-span-2 lg:col-span-1">
         <StatTile label="Total with complimentary" value={formatNumber(everyone)} unit={capacity ? `of ${formatNumber(capacity)}` : undefined} icon={UsersRound} tone="good" href={href()}
           meter={capacity ? { value: everyone, max: capacity, tone: "gold" } : undefined}
-          caption={capacity ? `${pluralize(Math.max(0, capacity - everyone), "seat")} left` : "Everyone with a ticket"} />
+          caption={`${capacity ? `${pluralize(Math.max(0, capacity - everyone), "seat")} left` : "Everyone with a ticket"}${countBlank || complimentary === complimentaryNamed ? "" : " · blank complimentary not counted"}`} />
       </div>
     </section>
   );

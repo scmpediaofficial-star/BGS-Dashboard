@@ -14,6 +14,8 @@ export type PaymentsData = {
   mode: "live" | "test";
   /** When the ticket ledger was last brought in line with Paystack (ISO time). */
   lastChecked: string | null;
+  /** False when automatic import is switched off in Settings. */
+  autoImport: boolean;
   balance: PaystackBalance[];
   payments: PaystackPayment[];
   truncated: boolean;
