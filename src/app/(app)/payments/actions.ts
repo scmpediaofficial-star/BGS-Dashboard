@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { ActionError, f, run, type ActionResult } from "@/lib/actions";
-import { requireCapability } from "@/lib/auth/session";
+import { getSession, PermissionError, requireCapability } from "@/lib/auth/session";
 import { recordEvent } from "@/lib/events";
 import { createCustomer, createPaymentLink, createRefund, getPayment, setCustomerRisk, updateCustomer } from "@/lib/paystack";
-import { syncPaystackSales, type SyncResult } from "@/lib/paystack-sync";
+import { autoSyncPaystack, syncPaystackSales, type SyncResult } from "@/lib/paystack-sync";
 import { formatMoney, truncate } from "@/lib/utils";
 
 // Paystack is reached with the secret key, not through row-level security, so
@@ -22,6 +22,21 @@ export async function syncPayments(): Promise<ActionResult<SyncResult>> {
     const result = await syncPaystackSales({ id: profile.id, name: profile.full_name });
     revalidatePath("/", "layout");
     return result;
+  });
+}
+
+/**
+ * The automatic import, as called by an open Tickets or Payments screen once a
+ * minute. Open to every signed-in team member: it only ever copies real
+ * Paystack payments into the ledger, and is recorded as the system's doing.
+ */
+export async function checkForPayments(): Promise<ActionResult<{ changed: boolean }>> {
+  return run(async () => {
+    if (!(await getSession())) throw new PermissionError("Your session has expired. Please sign in again.");
+    const result = await autoSyncPaystack();
+    const changed = Boolean(result && (result.imported || result.linked || result.refunded || result.customers));
+    if (changed) revalidatePath("/", "layout");
+    return { changed };
   });
 }
 

@@ -4,13 +4,17 @@ import { OfflineBanner } from "@/components/shell/offline-banner";
 import { SessionProvider, type Viewer } from "@/components/shell/session-context";
 import { Sidebar, type NavBadges } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
+import { after } from "next/server";
 import { requireSession } from "@/lib/auth/session";
+import { autoSyncPaystack } from "@/lib/paystack-sync";
 import { getSettings } from "@/lib/settings";
 import { daysUntil, formatDate, isoDay } from "@/lib/utils";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const { profile, supabase } = await requireSession();
   const today = isoDay();
+  // Opening the dashboard also brings in any new Paystack payments (at most once a minute, after the page is sent).
+  after(() => autoSyncPaystack());
 
   const [settings, overdue, actions, approvals, unread] = await Promise.all([
     getSettings(),

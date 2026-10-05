@@ -32,6 +32,51 @@ export async function ensureSaleCustomer(saleId: string): Promise<string | null>
   }
 }
 
+/** Where the automatic import keeps its own clock (app_settings). */
+const STATE_KEY = "paystack_sync";
+type SyncState = { attempted_at?: string; checked_at?: string; error?: string | null };
+
+async function readState(): Promise<SyncState> {
+  const { data } = await createAdminClient().from("app_settings").select("value").eq("key", STATE_KEY).maybeSingle();
+  return (data?.value ?? {}) as SyncState;
+}
+
+async function writeState(state: SyncState): Promise<void> {
+  const { error } = await createAdminClient().from("app_settings").upsert({ key: STATE_KEY, value: state, updated_at: new Date().toISOString() });
+  if (error) console.error("[paystack] could not save sync state:", error.message);
+}
+
+/** When Paystack was last read successfully (ISO time), for "last checked" on the Payments page. */
+export async function lastPaystackCheck(): Promise<{ checkedAt: string | null; error: string | null }> {
+  const state = await readState();
+  return { checkedAt: state.checked_at ?? null, error: state.error ?? null };
+}
+
+/**
+ * The automatic import. Called from every place that can notice time passing —
+ * a page being opened, the open Tickets and Payments screens once a minute, the
+ * scheduler — so a payment becomes a sale and a ticket without anyone pressing
+ * anything. It does nothing if Paystack was checked in the last `minSeconds`,
+ * which keeps all those callers to roughly one Paystack request a minute between
+ * them. Never throws.
+ */
+export async function autoSyncPaystack(minSeconds = 55): Promise<SyncResult | null> {
+  if (!isPaystackConfigured()) return null;
+  try {
+    const state = await readState();
+    const last = Date.parse(state.attempted_at ?? "");
+    if (Number.isFinite(last) && Date.now() - last < minSeconds * 1000) return null;
+    // Claim the slot first so callers arriving together don't all go to Paystack.
+    await writeState({ ...state, attempted_at: new Date().toISOString() });
+    return await syncPaystackSales();
+  } catch (error) {
+    console.error("[paystack] automatic import failed:", error);
+    const message = error instanceof ActionError ? error.message : "The automatic import failed. It will try again shortly.";
+    await writeState({ ...(await readState().catch(() => ({}))), attempted_at: new Date().toISOString(), error: message });
+    return null;
+  }
+}
+
 type SaleRef = { id: string; paystack_id: number | null; reference: string | null; payment_status: string; buyer_name: string };
 
 function chunk<T>(items: T[], size: number): T[][] {
@@ -175,5 +220,7 @@ export async function syncPaystackSales(actor: Actor = null): Promise<SyncResult
   const { data: uncoded } = await db.from("ticket_sales").select("id").eq("payment_status", "paid").is("paystack_customer_code", null).not("buyer_email", "is", null).order("sold_at").limit(40);
   for (const sale of uncoded ?? []) if (await ensureSaleCustomer(sale.id)) customers += 1;
 
+  const now = new Date().toISOString();
+  await writeState({ attempted_at: now, checked_at: now, error: null });
   return { payments: success.items.length, imported: imported.length, linked, refunded: refunded.length, customers };
 }

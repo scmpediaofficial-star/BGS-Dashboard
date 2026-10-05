@@ -21,7 +21,7 @@ export function PaymentsSetup({ webhookUrl }: { webhookUrl: string }) {
             </li>
             <li className="flex gap-3">
               <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent-soft text-xs font-bold text-accent-ink">2</span>
-              <span>On the same Paystack page, set the <strong className="font-semibold text-ink">live webhook URL</strong> to <code className="break-all rounded bg-surface-3 px-1.5 py-0.5 font-mono text-xs text-ink">{webhookUrl}</code> so each payment reaches the ticket ledger the moment it is made. Without it, payments still arrive within five minutes while the scheduler is on.</span>
+              <span>On the same Paystack page, set the <strong className="font-semibold text-ink">live webhook URL</strong> to <code className="break-all rounded bg-surface-3 px-1.5 py-0.5 font-mono text-xs text-ink">{webhookUrl}</code> so each payment reaches the ticket ledger the moment it is made. Without it, payments still arrive by themselves within a minute while the dashboard is open or the scheduler is on.</span>
             </li>
           </ol>
         </CardBody>

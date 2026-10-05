@@ -12,6 +12,8 @@ export type LedgerSale = { id: string; status: PaymentStatus; buyer: string; cod
 
 export type PaymentsData = {
   mode: "live" | "test";
+  /** When the ticket ledger was last brought in line with Paystack (ISO time). */
+  lastChecked: string | null;
   balance: PaystackBalance[];
   payments: PaystackPayment[];
   truncated: boolean;

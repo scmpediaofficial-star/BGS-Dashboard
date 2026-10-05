@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useAutoImport } from "@/components/payments/use-auto-import";
 import { AttendanceSummary } from "@/components/tickets/attendance-summary";
 import { SalesLedger } from "@/components/tickets/sales-ledger";
 import type { TicketEvent } from "@/components/tickets/ticket-art";
@@ -19,6 +20,7 @@ type Props = {
 
 export function TicketsView({ ticketTypes, sales, tickets, attendance, programmePending, event, virtual, targets }: Props) {
   useRealtimeRefresh(["ticket_sales", "ticket_types", "tickets"]);
+  useAutoImport();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();

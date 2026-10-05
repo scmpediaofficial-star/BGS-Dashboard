@@ -8,6 +8,7 @@ import { StatTile } from "@/components/charts/stat-tile";
 import { CustomersTab } from "@/components/payments/customers-tab";
 import { copyText, StateBadge } from "@/components/payments/shared";
 import { TransactionsTab } from "@/components/payments/transactions-tab";
+import { useAutoImport } from "@/components/payments/use-auto-import";
 import { PAYMENT_TABS, TAB_LABEL, type PaymentTab, type PaymentsData } from "@/components/payments/types";
 import { useViewer } from "@/components/shell/session-context";
 import { useAction } from "@/components/shared/use-action";
@@ -17,12 +18,13 @@ import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRealtimeRefresh } from "@/lib/hooks/use-realtime-refresh";
-import { cn, formatDate, formatDateTime, formatMoney, formatNumber, pluralize } from "@/lib/utils";
+import { cn, formatDate, formatDateTime, formatMoney, formatNumber, pluralize, timeAgo } from "@/lib/utils";
 
 export function PaymentsView({ tab, data, webhookUrl }: { tab: PaymentTab; data: PaymentsData; webhookUrl: string }) {
   const { can } = useViewer();
   // The ledger half of this page changes when a sale is recorded or a webhook lands.
   useRealtimeRefresh(["ticket_sales", "tickets"]);
+  useAutoImport();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -60,7 +62,7 @@ export function PaymentsView({ tab, data, webhookUrl }: { tab: PaymentTab; data:
       <PageHeader
         eyebrow="Commercial"
         title="Payments"
-        description={<>Everything on Paystack, without leaving the dashboard. Each successful payment becomes a sale and a ticket. {data.mode === "test" && <Badge tone="warning" size="sm" className="ml-1 align-middle">Test mode</Badge>}</>}
+        description={<>Everything on Paystack, without leaving the dashboard. Each successful payment becomes a sale and a ticket automatically. {data.mode === "test" && <Badge tone="warning" size="sm" className="ml-1 align-middle">Test mode</Badge>}</>}
         actions={
           <>
             <Button variant="outline" loading={refreshing} onClick={() => startRefresh(() => router.refresh())}>{!refreshing && <RefreshCw />} Refresh</Button>
@@ -74,7 +76,7 @@ export function PaymentsView({ tab, data, webhookUrl }: { tab: PaymentTab; data:
         <StatTile label="Paystack balance" value={balance ? formatMoney(balance.balance, balance.currency, true) : "—"} icon={Wallet} caption="Not yet paid out to the bank" />
         <StatTile label="Payments in the ticket ledger" value={formatNumber(successful.length - missing.length)} unit={`of ${formatNumber(successful.length)}`} icon={CircleCheck}
           tone={missing.length ? "critical" : "good"} meter={{ value: successful.length - missing.length, max: successful.length, tone: missing.length ? "warning" : "good" }}
-          caption={missing.length ? `${pluralize(missing.length, "payment")} still to import — press Sync tickets` : "Every payment has its sale and ticket"} />
+          caption={missing.length ? `${pluralize(missing.length, "payment")} still to import — press Sync tickets` : `Every payment has its sale and ticket${data.lastChecked ? ` · checked ${timeAgo(data.lastChecked)}` : ""}`} />
         <StatTile label="Not completed" value={formatNumber(data.payments.filter((p) => p.status === "failed" || p.status === "abandoned").length)} icon={TicketX} caption="Failed or abandoned at checkout — worth a follow-up" />
       </section>
 
@@ -143,12 +145,11 @@ export function PaymentsView({ tab, data, webhookUrl }: { tab: PaymentTab; data:
         )}
       </div>
 
-      {can("settings.manage") && (
-        <p className="mt-5 text-xs leading-relaxed text-ink-3">
-          Instant updates: in Paystack → Settings → API Keys &amp; Webhooks, set the webhook URL to{" "}
-          <button type="button" className="break-all font-mono font-semibold text-ink-2 hover:text-accent-ink" onClick={() => copyText(webhookUrl, "Webhook URL")}>{webhookUrl}</button>. With the scheduler on, payments also arrive on their own within five minutes.
-        </p>
-      )}
+      <p className="mt-5 text-xs leading-relaxed text-ink-3">
+        Payments are imported and ticketed automatically: within a minute while the dashboard is open, and around the clock while the scheduler is on (Settings → Scheduler).
+        {can("settings.manage") && <>{" "}For an instant import, set the webhook URL in Paystack → Settings → API Keys &amp; Webhooks to{" "}
+          <button type="button" className="break-all font-mono font-semibold text-ink-2 hover:text-accent-ink" onClick={() => copyText(webhookUrl, "Webhook URL")}>{webhookUrl}</button>.</>}
+      </p>
     </>
   );
 }
