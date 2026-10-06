@@ -1,5 +1,5 @@
 import {
-  Activity, CalendarRange, CreditCard, Handshake, LayoutDashboard, ListChecks, Mails, MicVocal, NotebookPen, Settings, Share2, Ticket, UsersRound,
+  Activity, CalendarRange, CreditCard, Handshake, LayoutDashboard, ListChecks, Mails, MessageSquareText, MicVocal, NotebookPen, Settings, Share2, Ticket, UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "@/lib/auth/permissions";
@@ -41,6 +41,7 @@ export const NAV: NavGroup[] = [
       { href: "/sponsorship", label: "Sponsorship", icon: Handshake, keywords: "sponsors partners pipeline packages" },
       { href: "/tickets", label: "Tickets & access", icon: Ticket, keywords: "sales revenue virtual zoom attendees delegates complimentary e-ticket check-in" },
       { href: "/payments", label: "Payments", icon: CreditCard, minRole: "manager", keywords: "paystack transactions customers refunds payouts disputes payment links" },
+      { href: "/sms", label: "Bulk SMS", icon: MessageSquareText, minRole: "manager", keywords: "text message blast delegates reminders bulksmsgh phone numbers" },
     ],
   },
   {

@@ -51,3 +51,4 @@ supabase/.branches/
 # private planning data (invited panelists, sponsor prospects, outreach lists, minutes).
 # Run it once in Supabase's SQL editor from your local copy — never commit it.
 supabase/migrations/20260918000003_seed.sql
+/BGS assets.zip

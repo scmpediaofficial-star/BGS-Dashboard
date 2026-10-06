@@ -7,6 +7,7 @@ export const CATEGORIES = {
   sponsorship: { label: "Sponsorship", description: "Pipeline movement and confirmed sponsors." },
   tickets: { label: "Tickets & virtual access", description: "Sales and Paystack payments, tickets issued, refunds and access codes." },
   meetings: { label: "Meetings & actions", description: "Meetings, minutes and action points." },
+  sms: { label: "Bulk SMS", description: "Text messages sent to delegates, contacts and uploaded lists, and how they went." },
   social: { label: "Social Studio", description: "Approvals, scheduled posts, publishing results and account health." },
   team: { label: "Team & access", description: "Invitations, role changes and deactivations." },
   system: { label: "System", description: "Settings, integrations and scheduler changes." },

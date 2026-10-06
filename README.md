@@ -34,6 +34,7 @@ Next.js 16 · Supabase (Postgres, Auth, Realtime, Storage) · Resend · installa
 | `SUPABASE_SERVICE_ROLE_KEY` | yes | the secret / service-role key — server only |
 | `NEXT_PUBLIC_SITE_URL` | recommended | e.g. `https://dashboard.boardroomgovsummit.com` (used in emails) |
 | `PAYSTACK_SECRET_KEY` | for payments | Paystack → Settings → API Keys & Webhooks → live secret key. Server only. See *Paystack and tickets* below |
+| `BULKSMSGH_API_KEY` | for bulk SMS | BulkSMSGH → clientlogin.bulksmsgh.com → API Documentation → generate a key. Server only. The sender ID is chosen in Settings → SMS |
 | `RESEND_API_KEY` | for email | without it, emails are rendered and kept in Settings → Email instead of sent |
 | `EMAIL_FROM` | for email | e.g. `BGS Dashboard <alerts@boardroomgovsummit.com>` — the domain must be verified in Resend |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | for push | generate with `npx web-push generate-vapid-keys` |
@@ -52,6 +53,10 @@ The Vercel ⇄ Supabase integration's variable names are also recognised.
 - **Tickets** (Commercial → Tickets & access): one per person, each with a unique number (`BGS-XXXX-XXXX`), in three kinds — ticket holders (paid), delegates (chairperson, panel members, moderators, guests) and complimentary (named, or blank in batches). Download any ticket, or everything on screen, as PNG or PDF; the artwork is `public/brand/ticket-template.jpg`.
 - **Settings → Tickets & payments** (admins): seats available, whether blank complimentary tickets count in the total, who is alerted about payments and refunds (or nobody), automatic import on or off, adding off-Paystack buyers as customers, the line above the name on the ticket, and ticket prices.
 - **Attendees so far** on the overview and the tickets page counts issued tickets: ticket holders, delegates, complimentary, and the total both without and with complimentary.
+
+## Bulk SMS
+
+**Bulk SMS** (Commercial → Bulk SMS, managers and above) sends one text message to a chosen audience through BulkSMSGH: ticket holders, delegates, complimentary guests, confirmed panelists, outreach contacts, sponsors, the team, and numbers typed in or uploaded as a CSV (template at `/sms-numbers-template.csv`). Write `{name}` to greet each person by first name. Every blast is kept in the history with the gateway's answer for each number; failed numbers can be sent to again in one click. The sender ID, default country code, signature and who is alerted live under Settings → SMS, which also sends a test message and an announcement to the team.
 
 ## Connecting social channels
 

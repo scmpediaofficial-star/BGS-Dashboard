@@ -772,6 +772,106 @@ export type Database = {
           },
         ]
       }
+      sms_campaigns: {
+        Row: {
+          audience: Json
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          failed: number
+          id: string
+          message: string
+          recipients: number
+          segments: number
+          sender_id: string
+          sent: number
+          sent_by: string | null
+          status: string
+        }
+        Insert: {
+          audience?: Json
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          failed?: number
+          id?: string
+          message: string
+          recipients?: number
+          segments?: number
+          sender_id: string
+          sent?: number
+          sent_by?: string | null
+          status?: string
+        }
+        Update: {
+          audience?: Json
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          failed?: number
+          id?: string
+          message?: string
+          recipients?: number
+          segments?: number
+          sender_id?: string
+          sent?: number
+          sent_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_campaigns_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_messages: {
+        Row: {
+          campaign_id: string
+          code: number | null
+          created_at: string
+          error: string | null
+          id: string
+          name: string | null
+          source: string
+          status: string
+          to_phone: string
+        }
+        Insert: {
+          campaign_id: string
+          code?: number | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          name?: string | null
+          source?: string
+          status?: string
+          to_phone: string
+        }
+        Update: {
+          campaign_id?: string
+          code?: number | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          name?: string | null
+          source?: string
+          status?: string
+          to_phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "sms_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_account_secrets: {
         Row: {
           access_token_enc: string | null

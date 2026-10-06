@@ -10,6 +10,8 @@ import { sendEmail } from "@/lib/email/send";
 import { recordEvent } from "@/lib/events";
 import { readPrefs } from "@/lib/notifications";
 import { getBrand, getSettings, saveSetting } from "@/lib/settings";
+import { isSmsConfigured, sendSms } from "@/lib/sms/gateway";
+import { normalisePhone, renderSms } from "@/lib/sms/text";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database";
 
@@ -162,4 +164,47 @@ export async function removePushSubscription(endpoint: string): Promise<ActionRe
     await recordEvent({ actor: { id: profile.id, name: profile.full_name }, action: "settings.push_disabled", category: "system", summary: "disabled push alerts on a device", link: "/settings/notifications", audience: "none", importance: "low" });
     revalidatePath("/", "layout"); return undefined;
   }, "Push alerts disabled");
+}
+
+// ── Bulk SMS ────────────────────────────────────────────────────────────────
+const smsSettingsSchema = z.object({ sender_id: z.string().trim().min(1, "Enter the sender ID.").max(11, "A sender ID is at most 11 characters, spaces included."),
+  country_code: z.string().trim().regex(/^\d{1,3}$/, "Choose a country."), signature: z.string().trim().max(60, "Keep the signature under 60 characters."), alert_audience: z.enum(["team", "managers", "admins"]) });
+export async function saveSmsSettings(input: Record<string, unknown>): Promise<ActionResult> {
+  return run(async () => {
+    const { profile } = await requireCapability("settings.manage");
+    const data = smsSettingsSchema.parse(input);
+    await saveSetting("sms", data, profile.id);
+    await recordEvent({ actor: { id: profile.id, name: profile.full_name }, action: "settings.sms_updated", category: "system", summary: "updated the SMS settings", link: "/settings?tab=sms", audience: "admins", importance: "normal",
+      facts: [{ label: "Sender ID", value: data.sender_id }, { label: "Alerts go to", value: data.alert_audience }] });
+    revalidatePath("/", "layout"); return undefined;
+  }, "SMS settings saved");
+}
+
+/** One real text to one number, so the key and the sender ID can be proved before a blast. Not logged as a campaign. */
+export async function sendTestSms(to: string): Promise<ActionResult> {
+  return run(async () => {
+    const { profile } = await requireCapability("settings.manage");
+    if (!isSmsConfigured()) throw new ActionError("Bulk SMS is not connected yet. Add BULKSMSGH_API_KEY to the deployment's environment variables.");
+    const settings = await getSettings();
+    if (!settings.sms.sender_id.trim()) throw new ActionError("Save a sender ID first.");
+    const phone = normalisePhone(z.string().max(40).parse(to), settings.sms.country_code);
+    if (!phone) throw new ActionError("That doesn't look like a phone number.");
+    const reply = await sendSms([phone], renderSms(`Test message from the ${settings.event.short_name} dashboard. If you can read this, bulk SMS is working.`, null, settings.sms.signature), settings.sms.sender_id.trim());
+    if (!reply.ok) throw new ActionError(reply.error ?? "The gateway refused the test message.");
+    await recordEvent({ actor: { id: profile.id, name: profile.full_name }, action: "sms.test_sent", category: "sms", summary: `sent a test SMS to ${phone}`, link: "/settings?tab=sms", audience: "none", importance: "low" });
+    return undefined;
+  }, "Test message sent");
+}
+
+/** Tells every active team member, through the dashboard's own alerts, that bulk SMS is available. */
+export async function announceSms(): Promise<ActionResult> {
+  return run(async () => {
+    const { profile } = await requireCapability("settings.manage");
+    await recordEvent({ actor: { id: profile.id, name: profile.full_name }, action: "sms.announced", category: "sms",
+      summary: "announced that the dashboard can now send bulk SMS",
+      detail: "From Commercial → Bulk SMS, managers and admins can text ticket holders, delegates, panelists, outreach contacts, sponsors, the team, or a list typed in or uploaded as a CSV. Every blast is logged number by number, and failed numbers can be sent to again.",
+      link: "/sms", audience: "team", importance: "high", tone: "good",
+      facts: [{ label: "Who can send", value: "Managers and admins" }, { label: "Where", value: "Commercial → Bulk SMS" }, { label: "Lists", value: "Tickets, programme, outreach, sponsors, team, CSV" }] });
+    revalidatePath("/", "layout"); return undefined;
+  }, "Announcement sent to the team");
 }

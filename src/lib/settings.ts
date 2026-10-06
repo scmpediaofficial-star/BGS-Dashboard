@@ -27,6 +27,16 @@ export type TicketSettings = {
   /** The small line above the name on a paid ticket. */
   admit_label: string;
 };
+export type SmsSettings = {
+  /** The name people see as the sender, approved by BulkSMSGH. Up to 11 characters. */
+  sender_id: string;
+  /** Country code assumed for numbers written without one, e.g. 233 for Ghana. */
+  country_code: string;
+  /** Appended to every message, e.g. "- BGS 2026". Blank for none. */
+  signature: string;
+  /** Who is told when a blast has gone out. */
+  alert_audience: AlertAudience;
+};
 
 export type AppSettings = {
   event: EventSettings;
@@ -37,6 +47,7 @@ export type AppSettings = {
   email: { volume: EmailVolume };
   virtual: VirtualSettings;
   tickets: TicketSettings;
+  sms: SmsSettings;
   scheduler: { enabled: boolean; app_url: string | null; configured_at: string | null };
 };
 
@@ -49,6 +60,7 @@ const DEFAULTS: AppSettings = {
   email: { volume: "all" },
   virtual: { join_url: null, meeting_id: null },
   tickets: { count_blank_complimentary: true, payment_alerts: true, refund_alerts: true, alert_audience: "team", auto_import: true, auto_customers: true, admit_label: "Admit one" },
+  sms: { sender_id: "", country_code: "233", signature: "", alert_audience: "managers" },
   scheduler: { enabled: false, app_url: null, configured_at: null },
 };
 

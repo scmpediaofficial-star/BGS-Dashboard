@@ -8,19 +8,22 @@ import { siteUrl } from "@/lib/env";
 import { readPrefs } from "@/lib/notifications";
 import { isPaystackConfigured } from "@/lib/paystack";
 import { getSettings } from "@/lib/settings";
+import { getSmsBalance, isSmsConfigured } from "@/lib/sms/gateway";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function SettingsPageContent({ tab = "event" }: { tab?: "event" | "targets" | "tickets" | "notifications" | "email" | "scheduler" }) {
+export async function SettingsPageContent({ tab = "event" }: { tab?: "event" | "targets" | "tickets" | "notifications" | "email" | "sms" | "scheduler" }) {
   const { profile, supabase } = await requireSession();
   const admin = hasRole(profile.role, "admin");
   // Workspace settings are for administrators; everyone else manages only their own alerts.
   if (!admin && tab !== "notifications") redirect("/settings/notifications");
-  const [settings, ticketTypes, logs, jobs] = await Promise.all([
+  const [settings, ticketTypes, logs, jobs, smsBalance, announced] = await Promise.all([
     getSettings(),
     admin ? supabase.from("ticket_types").select("id, name, price, currency, is_virtual, is_active").order("sort_order") : Promise.resolve({ data: [] }),
     admin ? supabase.from("email_log").select("id, to_email, subject, template, status, error, html, created_at").order("created_at", { ascending: false }).limit(40) : Promise.resolve({ data: [] }),
     admin ? createAdminClient().rpc("scheduler_status") : Promise.resolve({ data: [] }),
+    admin && tab === "sms" && isSmsConfigured() ? getSmsBalance() : Promise.resolve(null),
+    admin && tab === "sms" ? supabase.from("activity_log").select("created_at").eq("action", "sms.announced").order("created_at", { ascending: false }).limit(1).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   // Re-keyed on the values two tabs share (seats = ticket target), so no form is left holding a stale copy after a save.
-  return <SettingsView key={JSON.stringify([settings.targets, settings.tickets])} ticketTypes={ticketTypes.data ?? []} paystackConnected={isPaystackConfigured()} settings={settings} prefs={readPrefs(profile.notification_prefs)} logs={logs.data ?? []} jobs={jobs.data ?? []} initialTab={admin ? tab : "notifications"} defaultUrl={siteUrl()} />;
+  return <SettingsView key={JSON.stringify([settings.targets, settings.tickets])} ticketTypes={ticketTypes.data ?? []} paystackConnected={isPaystackConfigured()} settings={settings} prefs={readPrefs(profile.notification_prefs)} logs={logs.data ?? []} jobs={jobs.data ?? []} initialTab={admin ? tab : "notifications"} defaultUrl={siteUrl()} smsConnected={isSmsConfigured()} smsBalance={smsBalance} smsAnnounced={announced.data?.created_at ?? null} />;
 }

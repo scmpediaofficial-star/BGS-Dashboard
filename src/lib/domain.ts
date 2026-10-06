@@ -132,6 +132,18 @@ export const PAYSTACK_STATE: Record<PaystackState, Meta> = {
 export const paystackState = (status: string | null | undefined): Meta =>
   PAYSTACK_STATE[(status ?? "") as PaystackState] ?? { label: status ? status.replace(/[-_]/g, " ").replace(/^./, (c) => c.toUpperCase()) : "Unknown", tone: "neutral", icon: CircleDashed, color: "var(--neutral)" };
 
+/** A bulk SMS blast as a whole, and each number inside it. */
+export type SmsStatus = "sending" | "queued" | "sent" | "partial" | "failed" | "skipped";
+export const SMS_STATUS: Record<SmsStatus, Meta> = {
+  sending: { label: "Sending", tone: "warning", icon: LoaderCircle, color: "var(--warning)" },
+  queued: { label: "Queued", tone: "neutral", icon: Hourglass, color: "var(--neutral)" },
+  sent: { label: "Sent", tone: "good", icon: Send, color: "var(--good)" },
+  partial: { label: "Partly sent", tone: "serious", icon: TriangleAlert, color: "var(--serious)" },
+  failed: { label: "Failed", tone: "critical", icon: CircleX, color: "var(--critical)" },
+  skipped: { label: "Skipped", tone: "neutral", icon: CircleDashed, color: "var(--neutral)" },
+};
+export const smsStatus = (status: string): Meta => SMS_STATUS[status as SmsStatus] ?? SMS_STATUS.skipped;
+
 export const OVERDUE: Meta = { label: "Overdue", tone: "critical", icon: Flag, color: "var(--critical)" };
 
 /** Categorical chart slots (validated order — see globals.css). */
