@@ -24,7 +24,7 @@ const PER_REQUEST = 50; // numbers per gateway call when everyone gets the same 
 // Each round must end well inside the server's 60-second allowance even if the last gateway call waits its full timeout.
 const ROUND_MS = 20_000;
 /** A blast nobody has driven for this long is stalled: its in-flight claims are released on resume. */
-export const STALL_MS = 3 * 60_000;
+const STALL_MS = 3 * 60_000;
 
 const sendSchema = z.object({
   message: z.string().transform(plainText).pipe(z.string().trim().min(1, "Write the message first.").max(1000, "Keep the message under 1,000 characters.")),
