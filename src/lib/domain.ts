@@ -133,9 +133,10 @@ export const paystackState = (status: string | null | undefined): Meta =>
   PAYSTACK_STATE[(status ?? "") as PaystackState] ?? { label: status ? status.replace(/[-_]/g, " ").replace(/^./, (c) => c.toUpperCase()) : "Unknown", tone: "neutral", icon: CircleDashed, color: "var(--neutral)" };
 
 /** A bulk SMS blast as a whole, and each number inside it. */
-export type SmsStatus = "sending" | "queued" | "sent" | "partial" | "failed" | "skipped";
+export type SmsStatus = "sending" | "stalled" | "queued" | "sent" | "partial" | "failed" | "skipped";
 export const SMS_STATUS: Record<SmsStatus, Meta> = {
   sending: { label: "Sending", tone: "warning", icon: LoaderCircle, color: "var(--warning)" },
+  stalled: { label: "Stalled", tone: "serious", icon: TriangleAlert, color: "var(--serious)" },
   queued: { label: "Queued", tone: "neutral", icon: Hourglass, color: "var(--neutral)" },
   sent: { label: "Sent", tone: "good", icon: Send, color: "var(--good)" },
   partial: { label: "Partly sent", tone: "serious", icon: TriangleAlert, color: "var(--serious)" },

@@ -6,6 +6,7 @@ import { Download, FileUp, Search, Send, Users } from "lucide-react";
 import { toast } from "sonner";
 import { sendCampaign } from "@/app/(app)/sms/actions";
 import { useAction } from "@/components/shared/use-action";
+import { BlastProgress, useBlastDriver } from "@/components/sms/sms-progress";
 import { GROUP_KEYS, GROUPS, SOURCE_LABEL, type Audience, type GroupKey, type Recipient, type Source } from "@/components/sms/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,10 +38,10 @@ export function SmsCompose({ audience, sms, balance, ready, canSend, initialMess
   const [shown, setShown] = useState(PAGE);
   const [confirming, setConfirming] = useState(false);
 
-  const [send, sending] = useAction(sendCampaign, {
-    success: ({ sent, failed }) => (failed ? `Sent to ${formatNumber(sent)}; ${pluralize(failed, "number")} failed` : `Sent to ${pluralize(sent, "person", "people")}`),
-    onSuccess: ({ id }) => router.push(`/sms?campaign=${id}`),
-  });
+  // The server sends the first round and hands back; the driver keeps asking for rounds until nothing is queued.
+  const blast = useBlastDriver();
+  const [start, starting] = useAction(sendCampaign, { silent: true, onSuccess: (first) => blast.drive(first, (done) => router.push(`/sms?campaign=${done.id}`)) });
+  const sending = starting || blast.running;
 
   // The list exactly as the server will build it: chosen lists first, then typed or uploaded numbers, one row per number.
   const typed = useMemo(() => parseNumberList(manual, sms.country_code), [manual, sms.country_code]);
@@ -223,9 +224,10 @@ export function SmsCompose({ audience, sms, balance, ready, canSend, initialMess
       <ConfirmDialog open={confirming} onOpenChange={setConfirming} title={`Send to ${pluralize(included.length, "person", "people")}?`} confirmLabel="Send now" loading={sending}
         description={`${formatNumber(credits)} SMS ${credits === 1 ? "credit" : "credits"} will be used (${length.segments} ${length.segments === 1 ? "part" : "parts"} each). Messages go out straight away and cannot be recalled.`}
         onConfirm={async () => {
-          const result = await send({ message, groups: [...groups], manual, excluded: [...excluded] });
+          const result = await start({ message, groups: [...groups], manual, excluded: [...excluded] });
           if (result.ok) { setConfirming(false); setMessage(""); setGroups(new Set()); setManual(""); setFileName(null); setExcluded(new Set()); }
         }} />
+      <BlastProgress progress={blast.progress} running={blast.running} onClose={blast.clear} />
     </>
   );
 }

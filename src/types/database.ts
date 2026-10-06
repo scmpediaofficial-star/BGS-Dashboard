@@ -780,6 +780,7 @@ export type Database = {
           error: string | null
           failed: number
           id: string
+          last_activity_at: string | null
           message: string
           recipients: number
           segments: number
@@ -795,6 +796,7 @@ export type Database = {
           error?: string | null
           failed?: number
           id?: string
+          last_activity_at?: string | null
           message: string
           recipients?: number
           segments?: number
@@ -810,6 +812,7 @@ export type Database = {
           error?: string | null
           failed?: number
           id?: string
+          last_activity_at?: string | null
           message?: string
           recipients?: number
           segments?: number

@@ -31,10 +31,13 @@ export type Audience = { recipients: Record<GroupKey, Recipient[]>; summary: Rec
 
 export type Campaign = {
   id: string; message: string; sender_id: string; audience: string[]; segments: number; recipients: number; sent: number; failed: number;
-  status: string; error: string | null; created_at: string; completed_at: string | null; sender: { full_name: string } | null;
+  status: string; error: string | null; created_at: string; completed_at: string | null; last_activity_at: string | null; sender: { full_name: string } | null;
 };
 
 export type Message = { id: string; campaign_id: string; to_phone: string; name: string | null; source: string; status: string; code: number | null; error: string | null };
 
 /** The composer sends this; the server rebuilds the list itself and never trusts numbers it didn't derive or parse. */
 export type SendInput = { message: string; groups: GroupKey[]; manual: string; excluded: string[] };
+
+/** Where a blast stands after a round of sending. `queued` includes numbers claimed by a round still in flight. */
+export type Progress = { id: string; recipients: number; sent: number; failed: number; queued: number; status: string };

@@ -21,7 +21,7 @@ export default async function SmsPage({ searchParams }: PageProps<"/sms">) {
   const [audience, balance, campaigns, messages] = await Promise.all([
     loadAudience(supabase, settings.sms.country_code),
     configured ? getSmsBalance() : Promise.resolve(null),
-    supabase.from("sms_campaigns").select("id, message, sender_id, audience, segments, recipients, sent, failed, status, error, created_at, completed_at, sender:profiles!sms_campaigns_sent_by_fkey(full_name)").order("created_at", { ascending: false }).limit(100),
+    supabase.from("sms_campaigns").select("id, message, sender_id, audience, segments, recipients, sent, failed, status, error, created_at, completed_at, last_activity_at, sender:profiles!sms_campaigns_sent_by_fkey(full_name)").order("created_at", { ascending: false }).limit(100),
     openId ? supabase.from("sms_messages").select("id, campaign_id, to_phone, name, source, status, code, error").eq("campaign_id", openId).order("created_at") : Promise.resolve({ data: [] }),
   ]);
 
