@@ -14,14 +14,15 @@ import { pluralize, truncate } from "@/lib/utils";
 
 /**
  * A blast is sent in rounds. Each round claims a few numbers, sends them,
- * writes every answer straight away and hands back after ~40 seconds — well
+ * writes every answer straight away and hands back after ~20 seconds — well
  * inside the server's time allowance — so a thousand people take several
  * short calls (the browser keeps calling) and a server that stops mid-way
  * loses nothing: whatever is still queued can be resumed by anyone.
  */
 const MAX_RECIPIENTS = 5000;
 const PER_REQUEST = 50; // numbers per gateway call when everyone gets the same text
-const ROUND_MS = 40_000;
+// Each round must end well inside the server's 60-second allowance even if the last gateway call waits its full timeout.
+const ROUND_MS = 20_000;
 /** A blast nobody has driven for this long is stalled: its in-flight claims are released on resume. */
 export const STALL_MS = 3 * 60_000;
 
@@ -149,7 +150,7 @@ async function runRound(session: Session, id: string, settings: AppSettings): Pr
 
   while (Date.now() - started < ROUND_MS && !fatal) {
     // Claim a slice: only rows still queued become ours, so two rounds never text the same person.
-    const queued = check(await supabase.from("sms_messages").select("id").eq("campaign_id", id).eq("status", "queued").order("created_at").limit(personalised ? 24 : 150)) ?? [];
+    const queued = check(await supabase.from("sms_messages").select("id").eq("campaign_id", id).eq("status", "queued").order("created_at").limit(personalised ? 12 : 100)) ?? [];
     if (!queued.length) break;
     const mine = (check(await supabase.from("sms_messages").update({ status: "sending" }).in("id", queued.map((q) => q.id)).eq("status", "queued").select("id, to_phone, name")) ?? []) as Claimed[];
     if (!mine.length) { if (++emptyClaims > 2) break; continue; }

@@ -61,9 +61,9 @@ export async function sendSms(to: string[], message: string, senderId: string): 
   if (!key) return { ok: false, code: null, error: "BULKSMSGH_API_KEY is not set", raw: "" };
   const params = new URLSearchParams({ key, to: to.join(","), msg: message, sender_id: senderId });
   try {
-    let response = await fetch(`${BASE}/smsapi`, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params, cache: "no-store", signal: AbortSignal.timeout(25_000) });
+    let response = await fetch(`${BASE}/smsapi`, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params, cache: "no-store", signal: AbortSignal.timeout(12_000) });
     // The documentation shows the same call as a plain URL; fall back to that if POST is refused.
-    if (response.status === 404 || response.status === 405) response = await fetch(`${BASE}/smsapi?${params}`, { cache: "no-store", signal: AbortSignal.timeout(25_000) });
+    if (response.status === 404 || response.status === 405) response = await fetch(`${BASE}/smsapi?${params}`, { cache: "no-store", signal: AbortSignal.timeout(12_000) });
     return readReply(await response.text(), response.ok);
   } catch (error) {
     console.error("[sms] network error:", error);

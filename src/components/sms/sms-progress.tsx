@@ -25,11 +25,17 @@ export function useBlastDriver() {
     setRunning(true);
     let p = first;
     setProgress(p);
+    let misses = 0;
     while (p.status === "sending" && p.queued > 0 && !stop.current) {
       let result: Awaited<ReturnType<typeof continueCampaign>>;
       try { result = await continueCampaign(p.id); }
-      catch { result = { ok: false, error: "We couldn't reach the server. The blast is paused; resume it from History." }; }
-      if (!result.ok) { toast.error(result.error); break; }
+      catch { result = { ok: false, error: "We couldn’t reach the server. The blast is paused; resume it from History." }; }
+      if (!result.ok) {
+        // A round the server cut short still wrote its answers; ask again after a breath before giving up.
+        if (++misses <= 3 && !stop.current) { await new Promise((r) => setTimeout(r, 4000)); continue; }
+        toast.error(result.error); break;
+      }
+      misses = 0;
       p = result.data;
       setProgress(p);
     }
