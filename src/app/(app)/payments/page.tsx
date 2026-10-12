@@ -18,7 +18,7 @@ async function loadLedger(supabase: Session["supabase"], reread = false) {
   // React answers a repeated, identical GET within one render from memory. A second read after an
   // import must really reach the database; a request that carries a signal is never answered that way.
   const signal = reread ? AbortSignal.timeout(20_000) : undefined;
-  const salesQuery = supabase.from("ticket_sales").select("id, buyer_name, buyer_email, payment_status, paystack_id, paystack_customer_code").order("sold_at");
+  const salesQuery = supabase.from("ticket_sales").select("id, buyer_name, buyer_email, payment_status, paystack_id, paystack_customer_code, amount, currency, quantity").order("sold_at");
   const ticketsQuery = supabase.from("tickets").select("sale_id, code, kind, holder_name, organization, role_label").not("sale_id", "is", null).neq("status", "void").order("seq");
   const [sales, tickets] = await Promise.all([signal ? salesQuery.abortSignal(signal) : salesQuery, signal ? ticketsQuery.abortSignal(signal) : ticketsQuery]);
   const held = new Map<string, LedgerSale["tickets"]>();
@@ -35,7 +35,15 @@ async function loadLedger(supabase: Session["supabase"], reread = false) {
       if (key) (byCustomer[key] ??= []).push(sale);
     }
   }
-  return { byPayment, byCustomer };
+  // The actual money taken: Paystack and everything paid another way, in the main currency.
+  const paid = (sales.data ?? []).filter((s) => s.payment_status === "paid");
+  const currency = paid.find((s) => s.paystack_id !== null)?.currency ?? paid[0]?.currency ?? "GHS";
+  const sum = (list: typeof paid) => list.filter((s) => s.currency === currency).reduce((n, s) => n + Number(s.amount), 0);
+  const count = (list: typeof paid) => list.filter((s) => s.currency === currency).reduce((n, s) => n + s.quantity, 0);
+  const viaPaystack = paid.filter((s) => s.paystack_id !== null);
+  const outside = paid.filter((s) => s.paystack_id === null);
+  const totals = { currency, paystack: sum(viaPaystack), paystackTickets: count(viaPaystack), outside: sum(outside), outsideTickets: count(outside), total: sum(paid), totalTickets: count(paid) };
+  return { byPayment, byCustomer, totals };
 }
 
 export default async function PaymentsPage({ searchParams }: PageProps<"/payments">) {
@@ -82,6 +90,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
       pages: pages?.items,
       ledgerByPayment: ledger.byPayment,
       ledgerByCustomer: ledger.byCustomer,
+      ledgerTotals: ledger.totals,
       ticket: { price: types.data?.[0]?.price ?? null, currency: types.data?.[0]?.currency ?? "GHS" },
       event: ticketEvent(settings.event, settings.tickets),
       autoImport: settings.tickets.auto_import,

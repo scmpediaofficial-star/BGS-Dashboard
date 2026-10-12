@@ -29,6 +29,8 @@ export type PaymentsData = {
   /** Keyed by customer code and by lower-cased email. */
   ledgerByCustomer: Record<string, LedgerSale[]>;
   ticket: { price: number | null; currency: string };
+  /** Paid sales in the ticket ledger: what came through Paystack, what was paid outside it (institutions, transfers, cash) and both together. */
+  ledgerTotals: { currency: string; paystack: number; paystackTickets: number; outside: number; outsideTickets: number; total: number; totalTickets: number };
   /** Date and venue lines printed on the e-ticket. */
   event: TicketEvent;
 };

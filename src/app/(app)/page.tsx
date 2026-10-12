@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  ArrowRight, CalendarClock, CalendarDays, CircleCheck, ClipboardCheck, Flag, Handshake, ListChecks, Mails, MapPin, MicVocal, PenSquare, Rocket, Ticket, Video,
+  ArrowRight, CalendarClock, CalendarDays, CircleCheck, ClipboardCheck, Flag, Handshake, ListChecks, Mails, MapPin, MicVocal, PenSquare, Rocket, Ticket, Video, Coins,
 } from "lucide-react";
 import { DeadlineChart, type DeadlineBucket } from "@/components/charts/deadline-chart";
 import { Legend, SegmentedBar } from "@/components/charts/segmented-bar";
@@ -156,7 +156,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
       {hasRole(role, "admin") && setupSteps.some((s) => !s.done) && <GettingStarted steps={setupSteps} welcome={params.welcome === "1"} />}
 
       {/* ── KPI row ──────────────────────────────────────────────────────── */}
-      <section aria-label="Key figures" className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <section aria-label="Key figures" className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
         <StatTile label="Deliverables completed" value={formatNumber(done)} unit={`of ${items.length}`} icon={CircleCheck} href="/deliverables" meter={{ value: done, max: items.length, tone: "good" }} caption={`${percent(done, items.length)}% complete`} />
         <StatTile label="Overdue deliverables" value={formatNumber(overdue.length)} icon={Flag} tone={overdue.length ? "critical" : "good"} href="/deliverables?due=overdue" caption={overdue.length ? `Oldest was due ${formatDate(overdue[0].due_date)}` : "Nothing is late"} />
         <StatTile label="Panelists confirmed" value={formatNumber(confirmedPanelists)} unit={`of ${people.length}`} icon={MicVocal} href="/panels" meter={{ value: confirmedPanelists, max: people.length, tone: "accent" }} caption={`${people.filter((p) => p.status === "submitted").length} letters awaiting a reply`} />
@@ -167,8 +167,10 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
           icon={Ticket}
           href="/tickets"
           meter={targets.tickets ? { value: ticketsSold, max: targets.tickets, tone: "gold" } : undefined}
-          caption={revenue > 0 ? `${formatMoney(revenue, targets.currency, true)} paid in total · ${formatMoney(viaPaystack, targets.currency, true)} via Paystack` : "No sales recorded yet"}
+          caption={revenue > 0 ? `${formatMoney(viaPaystack, targets.currency, true)} via Paystack` : "No sales recorded yet"}
         />
+        <StatTile label="Actual total paid" value={formatMoney(revenue, targets.currency, true)} icon={Coins} tone="good" href="/tickets?tab=sales"
+          caption={revenue > 0 ? `Institutions ${formatMoney(revenue - viaPaystack, targets.currency, true)} + Paystack ${formatMoney(viaPaystack, targets.currency, true)}` : "Nothing paid yet"} />
       </section>
 
       {/* ── Attendees so far ─────────────────────────────────────────────── */}

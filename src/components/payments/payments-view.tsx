@@ -3,7 +3,7 @@
 import { useCallback, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Banknote, CircleCheck, Copy, ExternalLink, Landmark, RefreshCw, Scale, Settings, TicketX, Undo2, Wallet } from "lucide-react";
+import { Banknote, Building2, CircleCheck, Coins, Copy, ExternalLink, Landmark, RefreshCw, Scale, Settings, TicketX, Undo2, Wallet } from "lucide-react";
 import { syncPayments } from "@/app/(app)/payments/actions";
 import { StatTile } from "@/components/charts/stat-tile";
 import { CustomersTab } from "@/components/payments/customers-tab";
@@ -80,6 +80,12 @@ export function PaymentsView({ tab, data, webhookUrl }: { tab: PaymentTab; data:
           tone={missing.length ? "critical" : "good"} meter={{ value: successful.length - missing.length, max: successful.length, tone: missing.length ? "warning" : "good" }}
           caption={missing.length ? `${pluralize(missing.length, "payment")} still to import — press Sync tickets` : `Every payment has its sale and ticket${data.lastChecked ? ` · checked ${timeAgo(data.lastChecked)}` : ""}`} />
         <StatTile label="Not completed" value={formatNumber(data.payments.filter((p) => p.status === "failed" || p.status === "abandoned").length)} icon={TicketX} caption="Failed or abandoned at checkout — worth a follow-up" />
+      </section>
+
+      {/* Paystack only sees the money that went through Paystack. The ledger also holds what institutions and individuals paid another way. */}
+      <section aria-label="Institution payments and the actual total" className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+        <StatTile label="Institution payments" value={formatMoney(data.ledgerTotals.outside, data.ledgerTotals.currency, true)} icon={Building2} href="/tickets?tab=sales" caption={`${pluralize(data.ledgerTotals.outsideTickets, "ticket")} paid outside Paystack — institutions, transfers, cash`} />
+        <StatTile label="Actual total paid" value={formatMoney(data.ledgerTotals.total, data.ledgerTotals.currency, true)} icon={Coins} tone="good" href="/tickets?tab=sales" caption={`${pluralize(data.ledgerTotals.totalTickets, "paid ticket")} in all — ${formatMoney(data.ledgerTotals.paystack, data.ledgerTotals.currency, true)} Paystack + ${formatMoney(data.ledgerTotals.outside, data.ledgerTotals.currency, true)} institutions`} />
       </section>
 
       {data.truncated && <p className="mb-4 rounded-xl border border-line bg-warning-soft px-4 py-2.5 text-xs font-medium text-warning-ink">Paystack holds more records than are listed here; the most recent 1,000 are shown.</p>}
