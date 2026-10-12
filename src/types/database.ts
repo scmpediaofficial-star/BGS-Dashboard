@@ -333,6 +333,53 @@ export type Database = {
         }
         Relationships: []
       }
+      institutions: {
+        Row: {
+          contact_person: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          fee: number | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          fee?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          fee?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institutions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meetings: {
         Row: {
           attendees: Json
@@ -1357,6 +1404,7 @@ export type Database = {
           buyer_email: string | null
           buyer_name: string
           buyer_phone: string | null
+          institution_id: string | null
           channel: string
           country: string
           created_at: string
@@ -1381,6 +1429,7 @@ export type Database = {
           buyer_email?: string | null
           buyer_name: string
           buyer_phone?: string | null
+          institution_id?: string | null
           channel?: string
           country?: string
           created_at?: string
@@ -1405,6 +1454,7 @@ export type Database = {
           buyer_email?: string | null
           buyer_name?: string
           buyer_phone?: string | null
+          institution_id?: string | null
           channel?: string
           country?: string
           created_at?: string
@@ -1423,6 +1473,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ticket_sales_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ticket_sales_recorded_by_fkey"
             columns: ["recorded_by"]
