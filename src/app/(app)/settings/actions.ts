@@ -41,7 +41,8 @@ export async function saveTargets(input: Record<string, unknown>): Promise<Actio
 }
 
 const ticketSettingsSchema = z.object({ capacity: f.optionalInt, count_blank_complimentary: z.boolean(), payment_alerts: z.boolean(), refund_alerts: z.boolean(),
-  alert_audience: z.enum(["team", "managers", "admins"]), auto_import: z.boolean(), auto_customers: z.boolean(), admit_label: f.text(40) });
+  alert_audience: z.enum(["team", "managers", "admins"]), auto_import: z.boolean(), auto_customers: z.boolean(), admit_label: f.text(40),
+  direct_price: z.coerce.number().min(0, "The fee can't be negative.").max(1_000_000) });
 export async function saveTicketSettings(input: Record<string, unknown>): Promise<ActionResult> {
   return run(async () => {
     const { profile } = await requireCapability("settings.manage");
@@ -51,7 +52,7 @@ export async function saveTicketSettings(input: Record<string, unknown>): Promis
     // "Seats available" is the ticket target under another name: one number, two places to change it.
     await saveSetting("targets", { ...before.targets, tickets: capacity ?? null }, profile.id);
     await recordEvent({ actor: { id: profile.id, name: profile.full_name }, action: "settings.tickets_updated", category: "system", summary: "updated the ticket and payment settings", link: "/settings?tab=tickets", audience: "admins", importance: "normal",
-      facts: [{ label: "Seats available", value: capacity === null || capacity === undefined ? "No limit" : String(capacity) }, { label: "Payment alerts", value: tickets.payment_alerts ? "On" : "Off" }, { label: "Automatic import", value: tickets.auto_import ? "On" : "Off" }] });
+      facts: [{ label: "Seats available", value: capacity === null || capacity === undefined ? "No limit" : String(capacity) }, { label: "Fee outside Paystack", value: `GHS ${tickets.direct_price}` }, { label: "Payment alerts", value: tickets.payment_alerts ? "On" : "Off" }, { label: "Automatic import", value: tickets.auto_import ? "On" : "Off" }] });
     revalidatePath("/", "layout"); return undefined;
   }, "Ticket and payment settings saved");
 }

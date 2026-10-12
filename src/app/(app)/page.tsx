@@ -51,7 +51,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
     supabase.from("panelists").select("id, panel_id, status"),
     supabase.from("outreach_contacts").select("id, list, category, status"),
     supabase.from("sponsors").select("id, organization, stage, amount, currency"),
-    supabase.from("ticket_sales").select("quantity, amount, payment_status, currency"),
+    supabase.from("ticket_sales").select("quantity, amount, payment_status, currency, paystack_id"),
     supabase.from("action_items").select("id, title, owner_label, due_date, due_label, status, assignee:profiles!action_items_assignee_id_fkey(full_name, avatar_url)").neq("status", "done").order("due_date", { nullsFirst: false }).limit(6),
     supabase.from("meetings").select("id, title, meeting_at, venue, mode").gte("meeting_at", new Date().toISOString()).neq("status", "cancelled").order("meeting_at").limit(1),
     supabase.from("activity_log").select("id, actor_name, summary, link, category, created_at").order("created_at", { ascending: false }).limit(8),
@@ -77,6 +77,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
   const paid = (sales.data ?? []).filter((s) => s.payment_status === "paid" || s.payment_status === "complimentary");
   const ticketsSold = paid.reduce((sum, s) => sum + s.quantity, 0);
   const revenue = paid.reduce((sum, s) => sum + Number(s.amount), 0);
+  const viaPaystack = paid.filter((s) => s.paystack_id !== null).reduce((sum, s) => sum + Number(s.amount), 0);
 
   // Deadline load: everything older than four weeks collapses into one "Earlier" column.
   const thisWeek = weekStart(today);
@@ -166,7 +167,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
           icon={Ticket}
           href="/tickets"
           meter={targets.tickets ? { value: ticketsSold, max: targets.tickets, tone: "gold" } : undefined}
-          caption={revenue > 0 ? `${formatMoney(revenue, targets.currency, true)} recorded` : "No sales recorded yet"}
+          caption={revenue > 0 ? `${formatMoney(revenue, targets.currency, true)} paid in total · ${formatMoney(viaPaystack, targets.currency, true)} via Paystack` : "No sales recorded yet"}
         />
       </section>
 

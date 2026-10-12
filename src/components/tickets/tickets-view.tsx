@@ -19,10 +19,10 @@ import type { VirtualSettings } from "@/lib/settings";
 
 type Props = {
   ticketTypes: TicketType[]; sales: Sale[]; tickets: TicketRow[]; attendance: Attendance; programmePending: number;
-  event: TicketEvent; countBlank: boolean; virtual: VirtualSettings; targets: Targets;
+  event: TicketEvent; countBlank: boolean; virtual: VirtualSettings; targets: Targets; directPrice: number;
 };
 
-export function TicketsView({ ticketTypes, sales, tickets, attendance, programmePending, event, countBlank, virtual, targets }: Props) {
+export function TicketsView({ ticketTypes, sales, tickets, attendance, programmePending, event, countBlank, virtual, targets, directPrice }: Props) {
   const { can } = useViewer();
   useRealtimeRefresh(["ticket_sales", "ticket_types", "tickets"]);
   useAutoImport();
@@ -48,7 +48,7 @@ export function TicketsView({ ticketTypes, sales, tickets, attendance, programme
           <TabsTrigger value="sales">Sales ledger</TabsTrigger>
         </TabsList>
         <TabsContent value="tickets"><TicketDesk tickets={tickets} event={event} programmePending={programmePending} /></TabsContent>
-        <TabsContent value="sales"><SalesLedger ticketTypes={ticketTypes} sales={sales} tickets={tickets} event={event} virtual={virtual} targets={targets} /></TabsContent>
+        <TabsContent value="sales"><SalesLedger ticketTypes={ticketTypes} sales={sales} tickets={tickets} event={event} virtual={virtual} targets={targets} directPrice={directPrice} /></TabsContent>
       </Tabs>
     </>
   );

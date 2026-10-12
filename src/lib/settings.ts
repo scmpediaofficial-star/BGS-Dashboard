@@ -26,6 +26,8 @@ export type TicketSettings = {
   auto_customers: boolean;
   /** The small line above the name on a paid ticket. */
   admit_label: string;
+  /** What one ticket costs when an institution or a person pays outside Paystack (bank transfer, cheque, cash). */
+  direct_price: number;
 };
 export type SmsSettings = {
   /** The name people see as the sender, approved by BulkSMSGH. Up to 11 characters. */
@@ -59,7 +61,7 @@ const DEFAULTS: AppSettings = {
   social_queue: { timezone: "Africa/Accra", slots: ["08:30", "12:30", "17:30"], days: [0, 1, 2, 3, 4, 5, 6] },
   email: { volume: "all" },
   virtual: { join_url: null, meeting_id: null },
-  tickets: { count_blank_complimentary: true, payment_alerts: true, refund_alerts: true, alert_audience: "team", auto_import: true, auto_customers: true, admit_label: "Admit one" },
+  tickets: { count_blank_complimentary: true, payment_alerts: true, refund_alerts: true, alert_audience: "team", auto_import: true, auto_customers: true, admit_label: "Admit one", direct_price: 2000 },
   sms: { sender_id: "", country_code: "233", signature: "", alert_audience: "managers" },
   scheduler: { enabled: false, app_url: null, configured_at: null },
 };

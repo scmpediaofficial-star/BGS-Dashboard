@@ -89,6 +89,11 @@ export function TicketSettings({ settings, ticketTypes, paystackConnected }: { s
               hint="On: each successful payment becomes a sale and a ticket by itself. Off: nothing arrives until someone presses Sync tickets on the Payments page." />
             <Toggle id="ticket-auto-customers" label="Add buyers who paid another way to Paystack" checked={form.auto_customers} onChange={(v) => set("auto_customers", v)}
               hint="A sale recorded as paid by bank transfer, cheque or cash adds the buyer to Paystack as a customer, so everyone who has paid has a customer code." />
+            <div className="py-3">
+              <Field label="Fee for payments made outside Paystack (GHS)" htmlFor="ticket-direct-price" hint="What “Record sale” fills in for an institution, bank-transfer or cash payment. The website price stays on the ticket type.">
+                <Input id="ticket-direct-price" type="number" inputMode="decimal" min="0" step="0.01" value={form.direct_price} onChange={(e) => set("direct_price", Number(e.target.value))} />
+              </Field>
+            </div>
           </div>
           {!paystackConnected && <p className="mt-3 text-xs text-ink-3">Paystack is connected by adding <code className="rounded bg-surface-3 px-1 py-0.5 font-mono text-[11px] text-ink">PAYSTACK_SECRET_KEY</code> to the deployment. <Link href="/payments" className="font-semibold text-accent-ink hover:underline">See the steps</Link>.</p>}
         </Card>

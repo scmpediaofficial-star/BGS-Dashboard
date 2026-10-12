@@ -53,6 +53,7 @@ export default async function TicketsPage() {
       countBlank={settings.tickets.count_blank_complimentary}
       virtual={settings.virtual}
       targets={settings.targets}
+      directPrice={settings.tickets.direct_price}
     />
   );
 }
