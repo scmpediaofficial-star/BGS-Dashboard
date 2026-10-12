@@ -19,14 +19,14 @@ type Props = {
 };
 
 export function AttendanceSummary({ attendance, capacity, countBlank = true, linked, className }: Props) {
-  const { paid, delegates, complimentary, complimentaryNamed } = attendance;
+  const { paid, paidOnline, paidByInstitution, delegates, complimentary, complimentaryNamed } = attendance;
   const firm = paid + delegates;
   const everyone = firm + (countBlank ? complimentary : complimentaryNamed);
   const href = (kind?: string) => (linked ? `/tickets?tab=tickets${kind ? `&kind=${kind}` : ""}` : undefined);
 
   return (
     <section aria-label="Attendees so far" className={cn("grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5", className)}>
-      <StatTile label="Ticket holders" value={formatNumber(paid)} icon={Ticket} href={href("paid")} caption="Paid tickets issued" />
+      <StatTile label="Ticket holders" value={formatNumber(paid)} icon={Ticket} href={href("paid")} caption={paid ? `${formatNumber(paidOnline)} via Paystack · ${formatNumber(paidByInstitution)} by institutions` : "Paid tickets issued"} />
       <StatTile label="Delegates" value={formatNumber(delegates)} icon={MicVocal} href={href("delegate")} caption="Chairperson, panel members, moderators and guests" />
       <StatTile label="Complimentary" value={formatNumber(complimentary)} icon={Sparkles} href={href("complimentary")}
         caption={complimentary ? `${formatNumber(complimentaryNamed)} named · ${formatNumber(complimentary - complimentaryNamed)} still blank` : "None issued yet"} />

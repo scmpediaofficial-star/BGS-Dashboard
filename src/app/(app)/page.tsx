@@ -78,6 +78,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
   const ticketsSold = paid.reduce((sum, s) => sum + s.quantity, 0);
   const revenue = paid.reduce((sum, s) => sum + Number(s.amount), 0);
   const viaPaystack = paid.filter((s) => s.paystack_id !== null).reduce((sum, s) => sum + Number(s.amount), 0);
+  const soldOnline = paid.filter((s) => s.paystack_id !== null).reduce((sum, s) => sum + s.quantity, 0);
 
   // Deadline load: everything older than four weeks collapses into one "Earlier" column.
   const thisWeek = weekStart(today);
@@ -167,7 +168,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
           icon={Ticket}
           href="/tickets"
           meter={targets.tickets ? { value: ticketsSold, max: targets.tickets, tone: "gold" } : undefined}
-          caption={revenue > 0 ? `${formatMoney(viaPaystack, targets.currency, true)} via Paystack` : "No sales recorded yet"}
+          caption={ticketsSold > 0 ? `${formatNumber(soldOnline)} via Paystack · ${formatNumber(ticketsSold - soldOnline)} by institutions` : "No sales recorded yet"}
         />
         <StatTile label="Actual total paid" value={formatMoney(revenue, targets.currency, true)} icon={Coins} tone="good" href="/tickets?tab=sales"
           caption={revenue > 0 ? `Institutions ${formatMoney(revenue - viaPaystack, targets.currency, true)} + Paystack ${formatMoney(viaPaystack, targets.currency, true)}` : "Nothing paid yet"} />

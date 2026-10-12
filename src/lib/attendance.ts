@@ -24,26 +24,30 @@ export function moderatorName(value: string | null | undefined): string | null {
   return !name || /\b(tba|tbc|to be (announced|confirmed))\b/i.test(name) ? null : name;
 }
 
-export type Attendance = { paid: number; delegates: number; complimentary: number; complimentaryNamed: number; checkedIn: number };
+export type Attendance = { paid: number; paidOnline: number; paidByInstitution: number; delegates: number; complimentary: number; complimentaryNamed: number; checkedIn: number };
 
 /**
  * Headcount from issued tickets (void ones excluded), counted in the database
  * so it stays exact however many tickets there are.
- *   paid           people holding a paid ticket
+ *   paid           people holding a paid ticket — bought online through Paystack, or paid for by an institution (or another way) outside it
  *   delegates      chairperson, panel members, moderators and other invited delegates
  *   complimentary  complimentary tickets issued (named or still blank)
  */
 export async function getAttendance(supabase: SupabaseClient<Database>): Promise<Attendance> {
   const live = () => supabase.from("tickets").select("id", { count: "exact", head: true }).neq("status", "void");
-  const [paid, delegates, complimentary, named, checkedIn] = await Promise.all([
+  const [paid, online, delegates, complimentary, named, checkedIn] = await Promise.all([
     live().eq("kind", "paid"),
+    // Paid tickets whose sale came through Paystack; the rest were paid for by institutions or another way.
+    supabase.from("tickets").select("id, sale:ticket_sales!inner(paystack_id)", { count: "exact", head: true }).neq("status", "void").eq("kind", "paid").not("sale.paystack_id", "is", null),
     live().eq("kind", "delegate"),
     live().eq("kind", "complimentary"),
     live().eq("kind", "complimentary").not("holder_name", "is", null),
     supabase.from("tickets").select("id", { count: "exact", head: true }).eq("status", "checked_in"),
   ]);
+  const paidCount = paid.count ?? 0;
+  const paidOnline = Math.min(paidCount, online.count ?? 0);
   return {
-    paid: paid.count ?? 0, delegates: delegates.count ?? 0, complimentary: complimentary.count ?? 0,
+    paid: paidCount, paidOnline, paidByInstitution: paidCount - paidOnline, delegates: delegates.count ?? 0, complimentary: complimentary.count ?? 0,
     complimentaryNamed: named.count ?? 0, checkedIn: checkedIn.count ?? 0,
   };
 }
