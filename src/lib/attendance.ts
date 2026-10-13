@@ -15,6 +15,17 @@ export function ticketEvent(event: EventSettings, tickets: Pick<TicketSettings, 
   };
 }
 
+/** What the certificate of attendance says about the summit, from the event settings. */
+export function certificateEvent(event: EventSettings): { title: string; dateLine: string; venueLine: string; theme: string; convener: string } {
+  return {
+    title: event.name,
+    dateLine: new Intl.DateTimeFormat("en-GB", { timeZone: EVENT_TZ, day: "numeric", month: "long", year: "numeric" }).format(new Date(event.starts_at)),
+    venueLine: `${event.venue}, ${event.city}`,
+    theme: event.theme,
+    convener: event.convener,
+  };
+}
+
 /**
  * The person named in a panel's free-text moderator field, or null when nobody
  * is named yet: "Mr. A. Mensah (Chairman, XYZ)" → "Mr. A. Mensah"; "To be announced" → null.

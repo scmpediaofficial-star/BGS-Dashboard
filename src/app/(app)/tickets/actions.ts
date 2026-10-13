@@ -223,3 +223,20 @@ export async function deleteTickets(ids: string[]): Promise<ActionResult<{ count
     revalidatePath("/", "layout"); return { count: found.length };
   });
 }
+
+/**
+ * Ties tickets to the institution whose logo their certificates carry (or unties them with null).
+ * This is separate from who paid: a Paystack buyer can belong to an institution without moving money between totals.
+ */
+export async function setTicketInstitution(input: { ticket_ids: string[]; institution_id: string | null }): Promise<ActionResult<{ count: number }>> {
+  return run(async () => {
+    const { profile, supabase } = await requireCapability("tickets.manage");
+    const data = z.object({ ticket_ids: z.array(f.id).min(1).max(2000), institution_id: f.id.nullable() }).parse(input);
+    const institution = data.institution_id ? one(await supabase.from("institutions").select("id, name").eq("id", data.institution_id).single()) : null;
+    const rows = check(await supabase.from("tickets").update({ institution_id: institution?.id ?? null }).in("id", data.ticket_ids).select("id")) ?? [];
+    await recordEvent({ actor: { id: profile.id, name: profile.full_name }, action: "ticket.institution_set", category: "tickets",
+      summary: institution ? `tied ${pluralize(rows.length, "ticket")} to “${truncate(institution.name, 80)}” for certificates` : `untied ${pluralize(rows.length, "ticket")} from their institution`,
+      link: "/certificates", importance: "low" });
+    revalidatePath("/", "layout"); return { count: rows.length };
+  });
+}

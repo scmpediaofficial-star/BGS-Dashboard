@@ -5,9 +5,10 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Building2, Coins, Plus, Search, Tag, Trash2, UserPlus, UsersRound, X } from "lucide-react";
 import { toast } from "sonner";
-import { addMember, assignMembers, deleteInstitution, removeMember, saveInstitution } from "@/app/(app)/institutions/actions";
+import { addMember, assignMembers, deleteInstitution, removeMember, saveInstitution, setInstitutionLogo } from "@/app/(app)/institutions/actions";
 import type { Institution, MemberSale } from "@/components/institutions/types";
 import { useViewer } from "@/components/shell/session-context";
+import { ImageUpload } from "@/components/shared/image-upload";
 import { useAction } from "@/components/shared/use-action";
 import { StatTile } from "@/components/charts/stat-tile";
 import { Badge } from "@/components/ui/badge";
@@ -21,8 +22,8 @@ import { useRealtimeRefresh } from "@/lib/hooks/use-realtime-refresh";
 import { formatDate, formatMoney, formatNumber, pluralize } from "@/lib/utils";
 
 type Props = { institutions: Institution[]; sales: MemberSale[]; openId: string | null; directPrice: number };
-type Draft = { name: string; contact_person: string; email: string; phone: string; fee: string; notes: string };
-const draftOf = (i: Institution): Draft => ({ name: i.name, contact_person: i.contact_person ?? "", email: i.email ?? "", phone: i.phone ?? "", fee: i.fee === null ? "" : String(i.fee), notes: i.notes ?? "" });
+type Draft = { name: string; short_name: string; contact_person: string; email: string; phone: string; fee: string; notes: string };
+const draftOf = (i: Institution): Draft => ({ name: i.name, short_name: i.short_name ?? "", contact_person: i.contact_person ?? "", email: i.email ?? "", phone: i.phone ?? "", fee: i.fee === null ? "" : String(i.fee), notes: i.notes ?? "" });
 const ghs = (list: MemberSale[]) => list.filter((s) => s.currency === "GHS" && s.payment_status === "paid").reduce((n, s) => n + s.amount, 0);
 
 /** Bodies that pay for their members outside Paystack, and the members each one has paid for. */
@@ -45,7 +46,7 @@ export function InstitutionsView({ institutions, sales, openId, directPrice }: P
   const [tagAllTo, setTagAllTo] = useState("");
   const [member, setMember] = useState({ buyer_name: "", buyer_email: "", buyer_phone: "", amount: "" });
   // The sheet edits a copy and saves field by field as you leave each one.
-  const [draftState, setDraftState] = useState<{ key: string; values: Draft }>({ key: "", values: draftOf({ id: "", name: "", contact_person: null, email: null, phone: null, fee: null, notes: null, created_at: "" }) });
+  const [draftState, setDraftState] = useState<{ key: string; values: Draft }>({ key: "", values: draftOf({ id: "", name: "", short_name: null, logo_url: null, contact_person: null, email: null, phone: null, fee: null, notes: null, created_at: "" }) });
   const draft = selected && draftState.key === selected.id ? draftState.values : selected ? draftOf(selected) : draftState.values;
   const setDraft = (values: Draft) => selected && setDraftState({ key: selected.id, values });
 
@@ -58,6 +59,7 @@ export function InstitutionsView({ institutions, sales, openId, directPrice }: P
   });
   const [assign, assigning] = useAction(assignMembers, { success: ({ count }) => `${pluralize(count, "member")} tagged` });
   const [untag] = useAction(removeMember, { success: "Member untagged" });
+  const [saveLogo] = useAction(setInstitutionLogo, { success: "Logo saved" });
 
   function autosave(field: keyof Draft) {
     if (!selected) return;
@@ -124,7 +126,7 @@ export function InstitutionsView({ institutions, sales, openId, directPrice }: P
                 <tbody className="divide-y divide-line">
                   {filtered.map((i) => { const m = membersBy.get(i.id) ?? []; return (
                     <tr key={i.id} className="hover:bg-surface-2">
-                      <td className="px-5 py-3"><button onClick={() => open(i.id)} className="text-left text-[13px] font-bold text-ink hover:text-accent-ink">{i.name}</button></td>
+                      <td className="px-5 py-3"><div className="flex items-center gap-3"><Logo url={i.logo_url} /><button onClick={() => open(i.id)} className="text-left text-[13px] font-bold text-ink hover:text-accent-ink">{i.name}</button></div></td>
                       <td className="px-3 py-3 text-ink-2">{i.contact_person ?? "—"}{i.email && <p className="text-ink-3">{i.email}</p>}</td>
                       <td className="px-3 py-3 font-semibold text-ink">{formatNumber(m.reduce((n, s) => n + s.quantity, 0))}</td>
                       <td className="px-3 py-3 text-ink-2">{formatMoney(feeOf(i))}{i.fee === null && <span className="text-ink-3"> (default)</span>}</td>
@@ -136,7 +138,7 @@ export function InstitutionsView({ institutions, sales, openId, directPrice }: P
             </div>
             <ul className="divide-y divide-line md:hidden">
               {filtered.map((i) => { const m = membersBy.get(i.id) ?? []; return (
-                <li key={i.id} className="p-4"><button className="block w-full text-left" onClick={() => open(i.id)}><span className="block text-[13px] font-bold text-ink">{i.name}</span><span className="mt-0.5 block text-xs text-ink-3">{pluralize(m.reduce((n, s) => n + s.quantity, 0), "member")} · {formatMoney(ghs(m))} · {formatMoney(feeOf(i))} each</span></button></li>
+                <li key={i.id} className="flex items-center gap-3 p-4"><Logo url={i.logo_url} /><button className="block min-w-0 flex-1 text-left" onClick={() => open(i.id)}><span className="block text-[13px] font-bold text-ink">{i.name}</span><span className="mt-0.5 block text-xs text-ink-3">{pluralize(m.reduce((n, s) => n + s.quantity, 0), "member")} · {formatMoney(ghs(m))} · {formatMoney(feeOf(i))} each</span></button></li>
               ); })}
             </ul>
           </>
@@ -150,8 +152,13 @@ export function InstitutionsView({ institutions, sales, openId, directPrice }: P
             footer={<><Button variant="outline" onClick={() => open(null)}>Close</Button>{manage && <Button variant="danger-ghost" onClick={() => setConfirmDelete(true)}><Trash2 /> Remove institution</Button>}</>}>
             <div className="grid gap-4">
               <p className="text-xs text-ink-3">Changes save as you leave each field.</p>
+              <div className="rounded-xl border border-line bg-surface-2 p-4">
+                <ImageUpload value={selected.logo_url} folder="institutions" fit="contain" label="Logo" disabled={!manage} onChange={(url) => saveLogo({ id: selected.id, url })} />
+                <p className="mt-2 text-xs text-ink-3">Printed top right on the certificate of every member of this institution. A square or round logo on a white or transparent background works best.</p>
+              </div>
               <Field label="Name" htmlFor="inst-name"><Input id="inst-name" required disabled={!manage} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} onBlur={() => autosave("name")} /></Field>
               <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Short name" htmlFor="inst-short" optional hint="How members write it, e.g. ICAG. Used to match them to this institution."><Input id="inst-short" disabled={!manage} value={draft.short_name} onChange={(e) => setDraft({ ...draft, short_name: e.target.value })} onBlur={() => autosave("short_name")} /></Field>
                 <Field label="Contact person" htmlFor="inst-contact" optional><Input id="inst-contact" disabled={!manage} value={draft.contact_person} onChange={(e) => setDraft({ ...draft, contact_person: e.target.value })} onBlur={() => autosave("contact_person")} /></Field>
                 <Field label="Fee per member (GHS)" htmlFor="inst-fee" optional hint={`Blank uses the default, ${formatMoney(directPrice)}.`}><Input id="inst-fee" type="number" inputMode="decimal" min="0" step="0.01" disabled={!manage} value={draft.fee} onChange={(e) => setDraft({ ...draft, fee: e.target.value })} onBlur={() => autosave("fee")} /></Field>
                 <Field label="Email" htmlFor="inst-email" optional><Input id="inst-email" type="email" disabled={!manage} value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} onBlur={() => autosave("email")} /></Field>
@@ -206,4 +213,12 @@ export function InstitutionsView({ institutions, sales, openId, directPrice }: P
         description={`“${selected?.name ?? ""}” is removed from the list. Its members keep their tickets and sales; they just stop being tagged to it.`} onConfirm={() => { if (selected) remove(selected.id); }} />
     </>
   );
+}
+
+/** The institution's logo as a small tile; a placeholder until one is uploaded. */
+function Logo({ url }: { url: string | null }) {
+  return url ? (
+    // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage or bundled brand logo, host varies
+    <img src={url} alt="" className="size-9 shrink-0 rounded-md border border-line bg-white object-contain p-0.5" />
+  ) : <span className="grid size-9 shrink-0 place-items-center rounded-md border border-dashed border-line-strong text-ink-3" title="No logo yet"><Building2 className="size-4" aria-hidden /></span>;
 }

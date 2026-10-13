@@ -1,6 +1,6 @@
 import type { PaymentStatus } from "@/lib/domain";
 
-export type Institution = { id: string; name: string; contact_person: string | null; email: string | null; phone: string | null; fee: number | null; notes: string | null; created_at: string };
+export type Institution = { id: string; name: string; short_name: string | null; logo_url: string | null; contact_person: string | null; email: string | null; phone: string | null; fee: number | null; notes: string | null; created_at: string };
 
 /** A sale paid outside Paystack, with the ticket numbers issued for it. */
 export type MemberSale = {

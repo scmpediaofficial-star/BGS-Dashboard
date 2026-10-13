@@ -341,9 +341,11 @@ export type Database = {
           email: string | null
           fee: number | null
           id: string
+          logo_url: string | null
           name: string
           notes: string | null
           phone: string | null
+          short_name: string | null
           updated_at: string
         }
         Insert: {
@@ -353,9 +355,11 @@ export type Database = {
           email?: string | null
           fee?: number | null
           id?: string
+          logo_url?: string | null
           name: string
           notes?: string | null
           phone?: string | null
+          short_name?: string | null
           updated_at?: string
         }
         Update: {
@@ -365,9 +369,11 @@ export type Database = {
           email?: string | null
           fee?: number | null
           id?: string
+          logo_url?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
+          short_name?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1544,6 +1550,7 @@ export type Database = {
           holder_name: string | null
           holder_phone: string | null
           id: string
+          institution_id: string | null
           issued_by: string | null
           kind: string
           notes: string | null
@@ -1563,6 +1570,7 @@ export type Database = {
           holder_name?: string | null
           holder_phone?: string | null
           id?: string
+          institution_id?: string | null
           issued_by?: string | null
           kind: string
           notes?: string | null
@@ -1582,6 +1590,7 @@ export type Database = {
           holder_name?: string | null
           holder_phone?: string | null
           id?: string
+          institution_id?: string | null
           issued_by?: string | null
           kind?: string
           notes?: string | null
@@ -1594,6 +1603,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tickets_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tickets_issued_by_fkey"
             columns: ["issued_by"]

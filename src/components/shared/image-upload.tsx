@@ -14,11 +14,13 @@ type ImageUploadProps = {
   value: string | null;
   onChange: (url: string | null) => void;
   /** Folder inside the public `assets` bucket. */
-  folder: "avatars" | "panelists" | "sponsors";
+  folder: "avatars" | "panelists" | "sponsors" | "institutions";
   label: string;
   shape?: "circle" | "square";
   disabled?: boolean;
   className?: string;
+  /** `contain` shows a logo whole instead of cropping it to the frame. */
+  fit?: "cover" | "contain";
 };
 
 /**
@@ -26,7 +28,7 @@ type ImageUploadProps = {
  * allows contributors and above) and hands back the public URL. The caller
  * saves that URL with the rest of its form.
  */
-export function ImageUpload({ value, onChange, folder, label, shape = "square", disabled, className }: ImageUploadProps) {
+export function ImageUpload({ value, onChange, folder, label, shape = "square", disabled, className, fit = "cover" }: ImageUploadProps) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
@@ -65,7 +67,7 @@ export function ImageUpload({ value, onChange, folder, label, shape = "square", 
       >
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL, host varies per project
-          <img src={value} alt="" className="size-full object-cover" />
+          <img src={value} alt="" className={cn("size-full", fit === "contain" ? "bg-white object-contain p-1" : "object-cover")} />
         ) : (
           <ImagePlus className="size-5" aria-hidden />
         )}

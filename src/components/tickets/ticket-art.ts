@@ -30,7 +30,7 @@ const RULE = "#e3e3f0";
 export type TicketFace = { code: string; kind: TicketKind; name: string | null; organization: string | null; roleLabel: string | null };
 export type TicketEvent = { dateLine: string; venueLine: string; /** The small line above the name; "Admit one" unless changed in Settings. */ admitLabel?: string };
 
-type Bytes = Uint8Array<ArrayBuffer>;
+export type Bytes = Uint8Array<ArrayBuffer>;
 type Assets = { image: HTMLImageElement; bytes: Bytes; family: string };
 let assets: Promise<Assets> | undefined;
 
@@ -162,7 +162,7 @@ function drawPanel(ctx: CanvasRenderingContext2D, face: TicketFace, event: Ticke
   setTracking(ctx, 0);
 }
 
-function canvas(width: number, height: number): { el: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
+export function canvas(width: number, height: number): { el: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
   const el = document.createElement("canvas");
   el.width = width;
   el.height = height;
@@ -171,7 +171,7 @@ function canvas(width: number, height: number): { el: HTMLCanvasElement; ctx: Ca
   return { el, ctx };
 }
 
-function toBytes(el: HTMLCanvasElement, type: "image/png" | "image/jpeg", quality?: number): Promise<Bytes> {
+export function toBytes(el: HTMLCanvasElement, type: "image/png" | "image/jpeg", quality?: number): Promise<Bytes> {
   return new Promise((resolve, reject) => {
     el.toBlob((blob) => {
       if (!blob) return reject(new Error("The ticket image could not be created."));
@@ -288,7 +288,7 @@ export async function ticketsPdf(faces: TicketFace[], event: TicketEvent, onProg
 
 // ── ZIP (stored, no compression — PNGs are already compressed) ──────────────
 let crcTable: Uint32Array | undefined;
-function crc32(data: Bytes): number {
+export function crc32(data: Bytes): number {
   if (!crcTable) {
     crcTable = new Uint32Array(256);
     for (let i = 0; i < 256; i++) {

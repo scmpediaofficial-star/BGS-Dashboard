@@ -7,7 +7,7 @@ import { getSettings } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Tickets & access" };
 
-const TICKET_COLUMNS = "id, seq, code, kind, status, holder_name, holder_email, holder_phone, organization, role_label, sale_id, panelist_id, notes, checked_in_at, created_at";
+const TICKET_COLUMNS = "id, seq, code, kind, status, holder_name, holder_email, holder_phone, organization, role_label, sale_id, panelist_id, institution_id, notes, checked_in_at, created_at";
 
 /** Every ticket, read a page at a time: the API returns at most 1,000 rows per request. */
 async function loadTickets(supabase: Session["supabase"]): Promise<TicketRow[]> {
@@ -23,7 +23,7 @@ export default async function TicketsPage() {
   const { supabase } = await requireSession();
   const [types, sales, tickets, attendance, panelists, panels, settings] = await Promise.all([
     supabase.from("ticket_types").select("id, name, price, currency, is_virtual, is_active").order("sort_order"),
-    supabase.from("ticket_sales").select("id, ticket_type_id, buyer_name, buyer_email, buyer_phone, organization, country, quantity, amount, currency, channel, payment_status, reference, sold_at, access_code, access_sent_at, notes, paystack_id, paystack_customer_code, ticket_type:ticket_types(name, is_virtual)").order("sold_at", { ascending: false }),
+    supabase.from("ticket_sales").select("id, ticket_type_id, buyer_name, buyer_email, buyer_phone, organization, country, quantity, amount, currency, channel, payment_status, reference, sold_at, access_code, access_sent_at, notes, paystack_id, paystack_customer_code, institution_id, ticket_type:ticket_types(name, is_virtual)").order("sold_at", { ascending: false }),
     loadTickets(supabase),
     getAttendance(supabase),
     supabase.from("panelists").select("id, full_name").eq("status", "confirmed"),
