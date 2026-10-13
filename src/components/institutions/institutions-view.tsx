@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Building2, Coins, Plus, Search, Tag, Trash2, UserPlus, UsersRound, X } from "lucide-react";
 import { toast } from "sonner";
-import { addMember, assignMembers, deleteInstitution, removeMember, saveInstitution, setInstitutionLogo } from "@/app/(app)/institutions/actions";
+import { addMember, assignMembers, deleteInstitution, removeMember, saveInstitution, setInstitutionLogo, setInstitutionSignature } from "@/app/(app)/institutions/actions";
 import type { Institution, MemberSale } from "@/components/institutions/types";
 import { useViewer } from "@/components/shell/session-context";
 import { ImageUpload } from "@/components/shared/image-upload";
@@ -22,8 +22,8 @@ import { useRealtimeRefresh } from "@/lib/hooks/use-realtime-refresh";
 import { formatDate, formatMoney, formatNumber, pluralize } from "@/lib/utils";
 
 type Props = { institutions: Institution[]; sales: MemberSale[]; openId: string | null; directPrice: number };
-type Draft = { name: string; short_name: string; contact_person: string; email: string; phone: string; fee: string; notes: string };
-const draftOf = (i: Institution): Draft => ({ name: i.name, short_name: i.short_name ?? "", contact_person: i.contact_person ?? "", email: i.email ?? "", phone: i.phone ?? "", fee: i.fee === null ? "" : String(i.fee), notes: i.notes ?? "" });
+type Draft = { name: string; short_name: string; signatory_name: string; signatory_title: string; contact_person: string; email: string; phone: string; fee: string; notes: string };
+const draftOf = (i: Institution): Draft => ({ name: i.name, short_name: i.short_name ?? "", signatory_name: i.signatory_name ?? "", signatory_title: i.signatory_title ?? "", contact_person: i.contact_person ?? "", email: i.email ?? "", phone: i.phone ?? "", fee: i.fee === null ? "" : String(i.fee), notes: i.notes ?? "" });
 const ghs = (list: MemberSale[]) => list.filter((s) => s.currency === "GHS" && s.payment_status === "paid").reduce((n, s) => n + s.amount, 0);
 
 /** Bodies that pay for their members outside Paystack, and the members each one has paid for. */
@@ -46,7 +46,7 @@ export function InstitutionsView({ institutions, sales, openId, directPrice }: P
   const [tagAllTo, setTagAllTo] = useState("");
   const [member, setMember] = useState({ buyer_name: "", buyer_email: "", buyer_phone: "", amount: "" });
   // The sheet edits a copy and saves field by field as you leave each one.
-  const [draftState, setDraftState] = useState<{ key: string; values: Draft }>({ key: "", values: draftOf({ id: "", name: "", short_name: null, logo_url: null, contact_person: null, email: null, phone: null, fee: null, notes: null, created_at: "" }) });
+  const [draftState, setDraftState] = useState<{ key: string; values: Draft }>({ key: "", values: draftOf({ id: "", name: "", short_name: null, logo_url: null, signatory_name: null, signatory_title: null, signatory_signature_url: null, contact_person: null, email: null, phone: null, fee: null, notes: null, created_at: "" }) });
   const draft = selected && draftState.key === selected.id ? draftState.values : selected ? draftOf(selected) : draftState.values;
   const setDraft = (values: Draft) => selected && setDraftState({ key: selected.id, values });
 
@@ -60,6 +60,7 @@ export function InstitutionsView({ institutions, sales, openId, directPrice }: P
   const [assign, assigning] = useAction(assignMembers, { success: ({ count }) => `${pluralize(count, "member")} tagged` });
   const [untag] = useAction(removeMember, { success: "Member untagged" });
   const [saveLogo] = useAction(setInstitutionLogo, { success: "Logo saved" });
+  const [saveSignature] = useAction(setInstitutionSignature, { success: "Signature saved" });
 
   function autosave(field: keyof Draft) {
     if (!selected) return;
@@ -165,6 +166,16 @@ export function InstitutionsView({ institutions, sales, openId, directPrice }: P
                 <Field label="Phone" htmlFor="inst-phone" optional><Input id="inst-phone" inputMode="tel" disabled={!manage} value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} onBlur={() => autosave("phone")} /></Field>
               </div>
               <Field label="Notes" htmlFor="inst-notes" optional><Textarea id="inst-notes" rows={2} disabled={!manage} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} onBlur={() => autosave("notes")} /></Field>
+            </div>
+
+            <div className="mt-5 grid gap-4 rounded-xl border border-line bg-surface-2 p-4">
+              <div><h3 className="text-[13px] font-bold text-ink">Certificate signatory</h3><p className="mt-0.5 text-xs text-ink-3">Someone from {selected.short_name ?? "this institution"} who signs its members&apos; certificates. Their signature, name and title replace the date on the right; the date moves down beside the certificate number. Leave the name empty to keep the date there.</p></div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Name" htmlFor="inst-sig-name" optional><Input id="inst-sig-name" disabled={!manage} autoComplete="off" value={draft.signatory_name} onChange={(e) => setDraft({ ...draft, signatory_name: e.target.value })} onBlur={() => autosave("signatory_name")} /></Field>
+                <Field label="Title" htmlFor="inst-sig-title" optional><Input id="inst-sig-title" disabled={!manage} autoComplete="off" placeholder="e.g. President" value={draft.signatory_title} onChange={(e) => setDraft({ ...draft, signatory_title: e.target.value })} onBlur={() => autosave("signatory_title")} /></Field>
+              </div>
+              <ImageUpload value={selected.signatory_signature_url} folder="institutions" fit="contain" label="Signature" disabled={!manage} onChange={(url) => saveSignature({ id: selected.id, url })} />
+              <p className="text-xs text-ink-3">A photo or scan of the signature in dark ink on a white or transparent background.</p>
             </div>
 
             {manage && (

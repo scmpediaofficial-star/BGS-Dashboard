@@ -32,7 +32,7 @@ export default async function CertificatesPage() {
   const [tickets, sales, institutions, settings] = await Promise.all([
     loadTickets(supabase),
     loadSales(supabase),
-    supabase.from("institutions").select("id, name, short_name, logo_url").order("name"),
+    supabase.from("institutions").select("id, name, short_name, logo_url, signatory_name, signatory_title, signatory_signature_url").order("name"),
     getSettings(),
   ]);
   return (

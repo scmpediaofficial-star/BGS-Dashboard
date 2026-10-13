@@ -15,13 +15,13 @@ import { formatMoney, pluralize, truncate } from "@/lib/utils";
  * the money totals all live in the one ledger) that remembers who paid.
  */
 
-const institutionSchema = z.object({ id: f.optionalId, name: f.text(160), short_name: f.optionalText(40), contact_person: f.optionalText(160), email: f.optionalEmail, phone: f.optionalText(60), fee: f.optionalMoney, notes: f.optionalText(2000) });
+const institutionSchema = z.object({ id: f.optionalId, name: f.text(160), short_name: f.optionalText(40), signatory_name: f.optionalText(160), signatory_title: f.optionalText(160), contact_person: f.optionalText(160), email: f.optionalEmail, phone: f.optionalText(60), fee: f.optionalMoney, notes: f.optionalText(2000) });
 
 export async function saveInstitution(input: Record<string, unknown>): Promise<ActionResult<{ id: string }>> {
   return run(async () => {
     const { profile, supabase } = await requireCapability("tickets.manage");
     const data = institutionSchema.parse(input);
-    const values = { name: data.name, short_name: data.short_name ?? null, contact_person: data.contact_person ?? null, email: data.email ?? null, phone: data.phone ?? null, fee: data.fee ?? null, notes: data.notes ?? null };
+    const values = { name: data.name, short_name: data.short_name ?? null, signatory_name: data.signatory_name ?? null, signatory_title: data.signatory_title ?? null, contact_person: data.contact_person ?? null, email: data.email ?? null, phone: data.phone ?? null, fee: data.fee ?? null, notes: data.notes ?? null };
     if (data.id) {
       const before = one(await supabase.from("institutions").select("id, name").eq("id", data.id).single());
       check(await supabase.from("institutions").update(values).eq("id", data.id));
@@ -120,6 +120,19 @@ export async function setInstitutionLogo(input: { id: string; url: string | null
     const row = one(await supabase.from("institutions").select("id, name").eq("id", data.id).single());
     check(await supabase.from("institutions").update({ logo_url: data.url }).eq("id", row.id));
     await recordEvent({ actor: { id: profile.id, name: profile.full_name }, action: "institution.logo_changed", category: "tickets", summary: `${data.url ? "set" : "removed"} the logo of “${truncate(row.name, 80)}”`,
+      entity: { type: "institution", id: row.id, label: row.name }, link: `/institutions?item=${row.id}`, importance: "low" });
+    revalidatePath("/", "layout"); return undefined;
+  });
+}
+
+/** Sets (or clears) the image of the signature that goes above the institution's signatory on its members' certificates. */
+export async function setInstitutionSignature(input: { id: string; url: string | null }): Promise<ActionResult> {
+  return run(async () => {
+    const { profile, supabase } = await requireCapability("tickets.manage");
+    const data = z.object({ id: f.id, url: z.string().trim().url().max(1000).refine((u) => u.startsWith("https://") || u.startsWith("http://"), "That isn't a web address.").nullable() }).parse(input);
+    const row = one(await supabase.from("institutions").select("id, name").eq("id", data.id).single());
+    check(await supabase.from("institutions").update({ signatory_signature_url: data.url }).eq("id", row.id));
+    await recordEvent({ actor: { id: profile.id, name: profile.full_name }, action: "institution.signature_changed", category: "tickets", summary: `${data.url ? "set" : "removed"} the certificate signature for “${truncate(row.name, 80)}”`,
       entity: { type: "institution", id: row.id, label: row.name }, link: `/institutions?item=${row.id}`, importance: "low" });
     revalidatePath("/", "layout"); return undefined;
   });

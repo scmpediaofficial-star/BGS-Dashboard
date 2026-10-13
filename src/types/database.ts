@@ -346,6 +346,9 @@ export type Database = {
           notes: string | null
           phone: string | null
           short_name: string | null
+          signatory_name: string | null
+          signatory_signature_url: string | null
+          signatory_title: string | null
           updated_at: string
         }
         Insert: {
@@ -360,6 +363,9 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           short_name?: string | null
+          signatory_name?: string | null
+          signatory_signature_url?: string | null
+          signatory_title?: string | null
           updated_at?: string
         }
         Update: {
@@ -374,6 +380,9 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           short_name?: string | null
+          signatory_name?: string | null
+          signatory_signature_url?: string | null
+          signatory_title?: string | null
           updated_at?: string
         }
         Relationships: [

@@ -3,7 +3,7 @@ import type { CertificateFace } from "@/components/certificates/certificate-art"
 
 export type CertTicket = { id: string; code: string; kind: string; status: string; holder_name: string | null; organization: string | null; sale_id: string | null; institution_id: string | null };
 export type CertSale = { id: string; organization: string | null; institution_id: string | null };
-export type CertInstitution = { id: string; name: string; short_name: string | null; logo_url: string | null };
+export type CertInstitution = { id: string; name: string; short_name: string | null; logo_url: string | null; signatory_name: string | null; signatory_title: string | null; signatory_signature_url: string | null };
 
 /** How a certificate came to carry an institution's logo. */
 export type LabelSource = "ticket" | "payment" | "organisation";
@@ -45,5 +45,7 @@ export function certificateRows(tickets: CertTicket[], sales: CertSale[], instit
 }
 
 export const toCertificateFace = (row: Pick<CertificateRow, "code" | "name" | "institution">): CertificateFace => ({
-  code: row.code, name: row.name, institution: row.institution ? { name: row.institution.name, logoUrl: row.institution.logo_url } : null,
+  code: row.code, name: row.name, institution: row.institution
+    ? { name: row.institution.name, logoUrl: row.institution.logo_url, signatory: row.institution.signatory_name?.trim() ? { name: row.institution.signatory_name.trim(), title: row.institution.signatory_title?.trim() || null, signatureUrl: row.institution.signatory_signature_url } : null }
+    : null,
 });

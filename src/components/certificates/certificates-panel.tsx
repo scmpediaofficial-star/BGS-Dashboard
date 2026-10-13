@@ -191,7 +191,7 @@ function LabelCell({ row, institutions, manage, onChange }: { row: CertificateRo
             // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage or bundled brand logo, host varies
             <img src={row.institution.logo_url} alt="" className="size-9 shrink-0 rounded-md border border-line bg-white object-contain p-0.5" />
           ) : <span className="grid size-9 shrink-0 place-items-center rounded-md border border-dashed border-line-strong text-ink-3"><Building2 className="size-4" aria-hidden /></span>}
-          <div className="min-w-0"><p className="truncate text-[12.5px] font-semibold text-ink">{row.institution.short_name ?? row.institution.name}</p><p className="truncate text-[11px] text-ink-3">{row.source ? SOURCE_LABEL[row.source] : ""}{row.institution.logo_url ? "" : " · no logo yet"}</p></div>
+          <div className="min-w-0"><p className="truncate text-[12.5px] font-semibold text-ink">{row.institution.short_name ?? row.institution.name}</p><p className="truncate text-[11px] text-ink-3">{row.source ? SOURCE_LABEL[row.source] : ""}{row.institution.logo_url ? "" : " · no logo yet"}{row.institution.signatory_name ? ` · signed by ${row.institution.signatory_name}` : ""}</p></div>
         </>
       ) : <Badge tone="neutral" size="sm">No label</Badge>}
       {manage && institutions.length > 0 && (
@@ -244,25 +244,24 @@ function DownloadMenu({ row, event, variant = "label" }: { row: CertificateRow; 
 function CertificatePreview({ face, event }: { face: CertificateFace; event: CertificateEvent }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [failed, setFailed] = useState(false);
-  const { code, name } = face;
-  const instName = face.institution?.name ?? null;
-  const instLogo = face.institution?.logoUrl ?? null;
-  const { title, dateLine, venueLine, theme, convener } = event;
+  // A fresh object every render, so the drawing effect keys on what is in it.
+  const key = JSON.stringify({ face, event });
 
   useEffect(() => {
     let cancelled = false;
     const canvas = ref.current;
     if (!canvas) return;
-    paintCertificate(canvas, { code, name, institution: instName ? { name: instName, logoUrl: instLogo } : null }, { title, dateLine, venueLine, theme, convener }).then(
+    const { face: f, event: e } = JSON.parse(key) as { face: CertificateFace; event: CertificateEvent };
+    paintCertificate(canvas, f, e).then(
       () => { if (!cancelled) setFailed(false); },
       () => { if (!cancelled) setFailed(true); },
     );
     return () => { cancelled = true; };
-  }, [code, name, instName, instLogo, title, dateLine, venueLine, theme, convener]);
+  }, [key]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-surface-2">
-      <canvas ref={ref} width={CERT_W} height={CERT_H} role="img" aria-label={`Certificate for ${name}`} className="block h-auto w-full" />
+      <canvas ref={ref} width={CERT_W} height={CERT_H} role="img" aria-label={`Certificate for ${face.name}`} className="block h-auto w-full" />
       {failed && <p className="px-3 py-2 text-xs text-critical-ink">The preview could not be drawn. Check your connection.</p>}
     </div>
   );
