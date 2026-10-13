@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Award, Building2, ChevronDown, Download, Eye, FileArchive, FileImage, FileText, Search, Tag } from "lucide-react";
+import { Award, Building2, ChevronDown, Download, Eye, FileArchive, FileImage, FileText, LoaderCircle, Search, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { setTicketInstitution } from "@/app/(app)/tickets/actions";
 import { CERT_H, CERT_W, certificateFileName, certificatePng, certificatesPdf, certificatesPngZip, paintCertificate, type CertificateEvent, type CertificateFace } from "@/components/certificates/certificate-art";
@@ -17,9 +17,9 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown";
 import { Input, Select, Switch } from "@/components/ui/form";
-import { EmptyState } from "@/components/ui/misc";
+import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { useRealtimeRefresh } from "@/lib/hooks/use-realtime-refresh";
-import { formatNumber, pluralize } from "@/lib/utils";
+import { cn, formatNumber, pluralize } from "@/lib/utils";
 
 const PAGE = 100;
 const SOURCE_LABEL: Record<LabelSource, string> = { ticket: "Set by hand", payment: "Paid for by the institution", organisation: "Matched from organisation" };
@@ -243,9 +243,11 @@ function DownloadMenu({ row, event, variant = "label" }: { row: CertificateRow; 
 /** The certificate exactly as it will download. */
 function CertificatePreview({ face, event }: { face: CertificateFace; event: CertificateEvent }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const [failed, setFailed] = useState(false);
   // A fresh object every render, so the drawing effect keys on what is in it.
   const key = JSON.stringify({ face, event });
+  const [settled, setSettled] = useState<{ key: string; failed: boolean } | null>(null);
+  const loading = settled?.key !== key;
+  const failed = !loading && settled.failed;
 
   useEffect(() => {
     let cancelled = false;
@@ -253,16 +255,24 @@ function CertificatePreview({ face, event }: { face: CertificateFace; event: Cer
     if (!canvas) return;
     const { face: f, event: e } = JSON.parse(key) as { face: CertificateFace; event: CertificateEvent };
     paintCertificate(canvas, f, e).then(
-      () => { if (!cancelled) setFailed(false); },
-      () => { if (!cancelled) setFailed(true); },
+      () => { if (!cancelled) setSettled({ key, failed: false }); },
+      () => { if (!cancelled) setSettled({ key, failed: true }); },
     );
     return () => { cancelled = true; };
   }, [key]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-surface-2">
-      <canvas ref={ref} width={CERT_W} height={CERT_H} role="img" aria-label={`Certificate for ${face.name}`} className="block h-auto w-full" />
-      {failed && <p className="px-3 py-2 text-xs text-critical-ink">The preview could not be drawn. Check your connection.</p>}
+    <div className="relative aspect-[3508/2480] overflow-hidden rounded-xl border border-line bg-surface-2">
+      <canvas ref={ref} width={CERT_W} height={CERT_H} role="img" aria-label={`Certificate for ${face.name}`} className={cn("block h-auto w-full transition-opacity duration-200", loading && "opacity-0")} />
+      {loading && (
+        <div className="absolute inset-0" role="status" aria-live="polite">
+          <Skeleton className="size-full rounded-none" />
+          <div className="absolute inset-0 grid place-items-center">
+            <p className="flex items-center gap-2 rounded-full bg-surface px-3.5 py-2 text-xs font-semibold text-ink-2 shadow-sm"><LoaderCircle className="size-4 animate-spin text-accent" aria-hidden /> Preparing the certificate…</p>
+          </div>
+        </div>
+      )}
+      {failed && <p className="absolute inset-x-0 bottom-0 bg-surface px-3 py-2 text-xs text-critical-ink">The preview could not be drawn. Check your connection.</p>}
     </div>
   );
 }
