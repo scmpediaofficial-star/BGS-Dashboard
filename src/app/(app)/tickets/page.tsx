@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { TicketsView } from "@/components/tickets/tickets-view";
-import type { Sale, TicketRow } from "@/components/tickets/types";
+import type { InstitutionLite, Sale, TicketRow } from "@/components/tickets/types";
 import { getAttendance, moderatorName, ticketEvent } from "@/lib/attendance";
 import { requireSession, type Session } from "@/lib/auth/session";
 import { getSettings } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Tickets & access" };
 
-const TICKET_COLUMNS = "id, seq, code, kind, status, holder_name, holder_email, holder_phone, organization, role_label, sale_id, panelist_id, institution_id, notes, checked_in_at, created_at";
+const TICKET_COLUMNS = "id, seq, code, kind, status, holder_name, holder_email, holder_phone, organization, role_label, sale_id, panelist_id, institution_id, notes, checked_in_at, created_at, student_number, programme, details_completed_at, first_downloaded_at, download_count";
 
 /** Every ticket, read a page at a time: the API returns at most 1,000 rows per request. */
 async function loadTickets(supabase: Session["supabase"]): Promise<TicketRow[]> {
@@ -21,7 +21,7 @@ async function loadTickets(supabase: Session["supabase"]): Promise<TicketRow[]> 
 
 export default async function TicketsPage() {
   const { supabase } = await requireSession();
-  const [types, sales, tickets, attendance, panelists, panels, settings] = await Promise.all([
+  const [types, sales, tickets, attendance, panelists, panels, settings, institutions] = await Promise.all([
     supabase.from("ticket_types").select("id, name, price, currency, is_virtual, is_active").order("sort_order"),
     supabase.from("ticket_sales").select("id, ticket_type_id, buyer_name, buyer_email, buyer_phone, organization, country, quantity, amount, currency, channel, payment_status, reference, sold_at, access_code, access_sent_at, notes, paystack_id, paystack_customer_code, institution_id, ticket_type:ticket_types(name, is_virtual)").order("sold_at", { ascending: false }),
     loadTickets(supabase),
@@ -29,6 +29,7 @@ export default async function TicketsPage() {
     supabase.from("panelists").select("id, full_name").eq("status", "confirmed"),
     supabase.from("panels").select("moderator"),
     getSettings(),
+    supabase.from("institutions").select("id, name, short_name, logo_url").order("name"),
   ]);
 
   // People on the programme who have no delegate ticket yet (matched by panelist, then by name).
@@ -47,6 +48,7 @@ export default async function TicketsPage() {
       ticketTypes={types.data ?? []}
       sales={(sales.data ?? []) as Sale[]}
       tickets={tickets}
+      institutions={(institutions.data ?? []) as InstitutionLite[]}
       attendance={attendance}
       programmePending={waiting.size}
       event={ticketEvent(settings.event, settings.tickets)}

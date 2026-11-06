@@ -27,7 +27,11 @@ const PURPLE = "#804a95";
 const INK_SOFT = "#5b5b86";
 const RULE = "#e3e3f0";
 
-export type TicketFace = { code: string; kind: TicketKind; name: string | null; organization: string | null; roleLabel: string | null };
+export type TicketFace = {
+  code: string; kind: TicketKind; name: string | null; organization: string | null; roleLabel: string | null;
+  /** The institution's logo, printed at the top of a student ticket. Without one the ticket is set as usual. */
+  logoUrl?: string | null;
+};
 export type TicketEvent = { dateLine: string; venueLine: string; /** The small line above the name; "Admit one" unless changed in Settings. */ admitLabel?: string };
 
 export type Bytes = Uint8Array<ArrayBuffer>;
@@ -58,6 +62,42 @@ function loadAssets(): Promise<Assets> {
   return assets;
 }
 
+// ── Institution logos (student tickets) ─────────────────────────────────────
+type Logos = Map<string, HTMLImageElement>;
+const logoCache = new Map<string, Promise<HTMLImageElement | null>>();
+
+/** One institution's logo, or null when it cannot be loaded (the ticket is then set without it). */
+function loadLogo(url: string): Promise<HTMLImageElement | null> {
+  let hit = logoCache.get(url);
+  if (!hit) {
+    hit = (async () => {
+      const response = await fetch(url);
+      if (!response.ok) return null;
+      const objectUrl = URL.createObjectURL(await response.blob());
+      try {
+        const image = new Image();
+        image.decoding = "async";
+        image.src = objectUrl;
+        await image.decode();
+        return image;
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    })().catch(() => null);
+    logoCache.set(url, hit);
+  }
+  return hit;
+}
+
+async function loadLogos(faces: TicketFace[]): Promise<Logos> {
+  const logos: Logos = new Map();
+  for (const url of new Set(faces.map((face) => face.logoUrl).filter((url): url is string => !!url))) {
+    const image = await loadLogo(url);
+    if (image) logos.set(url, image);
+  }
+  return logos;
+}
+
 function setTracking(ctx: CanvasRenderingContext2D, px: number) {
   // Not in every browser yet; without it the small caps are simply set a little tighter.
   if ("letterSpacing" in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${px}px`;
@@ -82,12 +122,13 @@ function headline(face: TicketFace, admit: string): { eyebrow: string; title: st
   if (face.kind === "complimentary") {
     return name ? { eyebrow: `Complimentary · ${admit}`, title: name, sub: organization } : { eyebrow: admit, title: "Complimentary", sub: organization };
   }
+  if (face.kind === "student") return { eyebrow: organization ? `Student of ${organization}` : "Student", title: name ?? "Student", sub: null };
   if (face.kind === "delegate") return { eyebrow: face.roleLabel?.trim() || "Delegate", title: name ?? "Delegate", sub: organization };
   return { eyebrow: admit, title: name ?? "Ticket holder", sub: organization };
 }
 
 /** Draws the white panel (TICKET_W × PANEL_H) for one ticket. */
-function drawPanel(ctx: CanvasRenderingContext2D, face: TicketFace, event: TicketEvent, family: string) {
+function drawPanel(ctx: CanvasRenderingContext2D, face: TicketFace, event: TicketEvent, family: string, logos: Logos) {
   const pad = 84;
   const inner = TICKET_W - pad * 2;
   const { eyebrow, title, sub } = headline(face, event.admitLabel?.trim() || "Admit one");
@@ -96,18 +137,33 @@ function drawPanel(ctx: CanvasRenderingContext2D, face: TicketFace, event: Ticke
   ctx.fillRect(0, 0, TICKET_W, PANEL_H);
   ctx.textBaseline = "alphabetic";
 
+  // A student ticket carries the institution's logo, centred above the name.
+  const logo = face.logoUrl ? logos.get(face.logoUrl) : undefined;
+  let eyebrowY = 78;
+  let nameTop = 104;
+  if (logo) {
+    const boxW = 340;
+    const boxH = 104;
+    const scale = Math.min(boxW / logo.naturalWidth, boxH / logo.naturalHeight);
+    const w = logo.naturalWidth * scale;
+    const h = logo.naturalHeight * scale;
+    ctx.drawImage(logo, (TICKET_W - w) / 2, 12 + (boxH - h) / 2, w, h);
+    eyebrowY = 156;
+    nameTop = 176;
+  }
+
   // Eyebrow
   ctx.textAlign = "center";
   ctx.fillStyle = PURPLE;
   ctx.font = `700 27px ${family}`;
   setTracking(ctx, 7);
-  ctx.fillText(eyebrow.toUpperCase(), TICKET_W / 2, 78, inner);
+  ctx.fillText(eyebrow.toUpperCase(), TICKET_W / 2, eyebrowY, inner);
   setTracking(ctx, 0);
 
   // Name: as large as fits on one line, two lines before it gets small.
   const display = title.toUpperCase();
   const footerTop = 372;
-  const nameArea = { top: 104, bottom: sub ? footerTop - 62 : footerTop - 22 };
+  const nameArea = { top: nameTop, bottom: sub ? footerTop - 62 : footerTop - 22 };
   let size = 112;
   let lines: string[] = [display];
   for (; size >= 40; size -= 4) {
@@ -183,8 +239,9 @@ export function toBytes(el: HTMLCanvasElement, type: "image/png" | "image/jpeg",
 /** Paints the whole ticket onto `target` (any size with the ticket's proportions). */
 export async function paintTicket(target: HTMLCanvasElement, face: TicketFace, event: TicketEvent): Promise<void> {
   const { image, family } = await loadAssets();
+  const logos = await loadLogos([face]);
   const panel = canvas(TICKET_W, PANEL_H);
-  drawPanel(panel.ctx, face, event, family);
+  drawPanel(panel.ctx, face, event, family, logos);
   target.width = TICKET_W;
   target.height = TICKET_H;
   const ctx = target.getContext("2d");
@@ -227,6 +284,7 @@ async function panelImage(el: HTMLCanvasElement, ctx: CanvasRenderingContext2D):
 /** One ticket per page at the artwork's print size (4.13 in wide). */
 export async function ticketsPdf(faces: TicketFace[], event: TicketEvent, onProgress?: (done: number) => void): Promise<Blob> {
   const { bytes: template, family } = await loadAssets();
+  const logos = await loadLogos(faces);
   const pageW = 4.13 * 72;
   const scale = pageW / TICKET_W;
   const pageH = TICKET_H * scale;
@@ -264,7 +322,7 @@ export async function ticketsPdf(faces: TicketFace[], event: TicketEvent, onProg
 
   const panel = canvas(TICKET_W, PANEL_H);
   for (let i = 0; i < faces.length; i++) {
-    drawPanel(panel.ctx, faces[i], event, family);
+    drawPanel(panel.ctx, faces[i], event, family, logos);
     const image = await panelImage(panel.el, panel.ctx);
     const id = pageId(i);
     const contents = encoder.encode(

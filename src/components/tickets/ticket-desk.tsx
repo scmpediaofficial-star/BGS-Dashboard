@@ -11,7 +11,7 @@ import { StatusMenu } from "@/components/shared/status-menu";
 import { useAction } from "@/components/shared/use-action";
 import { paintTicket, saveBlob, ticketFileName, ticketsPdf, ticketsPngZip, TICKET_H, TICKET_W, type TicketEvent, type TicketFace } from "@/components/tickets/ticket-art";
 import { TicketDownload } from "@/components/tickets/ticket-download";
-import { toFace, type TicketRow } from "@/components/tickets/types";
+import { toFace, type InstitutionLite, type TicketRow } from "@/components/tickets/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -44,7 +44,7 @@ const kindLabel = (t: Pick<TicketRow, "kind" | "role_label">) => (t.kind === "de
 const holderLabel = (t: Pick<TicketRow, "kind" | "holder_name">) => t.holder_name ?? (t.kind === "complimentary" ? "Not assigned yet" : "No name");
 
 /** Every issued ticket: find one, hand it out, download it, check it in. */
-export function TicketDesk({ tickets, event, programmePending }: { tickets: TicketRow[]; event: TicketEvent; programmePending: number }) {
+export function TicketDesk({ tickets, event, programmePending, institutions }: { tickets: TicketRow[]; event: TicketEvent; programmePending: number; institutions: InstitutionLite[] }) {
   const { can } = useViewer();
   const manage = can("tickets.manage");
   const router = useRouter();
@@ -56,6 +56,12 @@ export function TicketDesk({ tickets, event, programmePending }: { tickets: Tick
   const adding = params.get("new") === "delegate";
   const batching = params.get("new") === "complimentary";
   const selected = tickets.find((t) => t.id === openId);
+  // A student ticket names its institution and carries its logo; the institution row is the source of both.
+  const institutionOf = useMemo(() => new Map(institutions.map((i) => [i.id, i])), [institutions]);
+  const printed = useCallback((t: TicketRow) => {
+    const institution = t.kind === "student" && t.institution_id ? institutionOf.get(t.institution_id) : undefined;
+    return { ...t, organization: institution?.name ?? t.organization, logoUrl: institution?.logo_url ?? null };
+  }, [institutionOf]);
 
   const setParams = useCallback(
     (patch: Record<string, string | null>) => {
@@ -108,10 +114,12 @@ export function TicketDesk({ tickets, event, programmePending }: { tickets: Tick
   }, [tickets, kind, inStatus, query]);
   const visible = filtered.slice(0, shown);
 
+  // Student tickets are handed out through the student page; only people who manage tickets may download them here.
+  const downloadable = useMemo(() => (manage ? filtered : filtered.filter((t) => t.kind !== "student")), [manage, filtered]);
   const bulkName = `BGS-2026-${kind === "all" ? "" : `${kind === "paid" ? "paid" : kind}-`}tickets-${filtered.length}`;
   async function bulk(format: "pdf" | "png") {
-    if (!filtered.length || progress) return;
-    const faces = filtered.map(toFace);
+    if (!downloadable.length || progress) return;
+    const faces = downloadable.map((t) => { const p = printed(t); return toFace(p, p.logoUrl); });
     const label = (done: number) => `Preparing ${formatNumber(done)} of ${formatNumber(faces.length)}…`;
     setProgress(label(0));
     try {
@@ -132,9 +140,12 @@ export function TicketDesk({ tickets, event, programmePending }: { tickets: Tick
     saveBlob(new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8" }), `${bulkName}-${isoDay()}.csv`);
   }
 
-  const editable = manage;
+  // Students are edited in their own tab, where the institution, student number and programme live.
+  const editable = manage && selected?.kind !== "student";
   const face: TicketFace | null = selected
-    ? { code: selected.code, kind: selected.kind, name: draft.holder_name.trim() || null, organization: draft.organization.trim() || null, roleLabel: selected.kind === "delegate" ? draft.role_label.trim() || null : null }
+    ? selected.kind === "student"
+      ? { code: selected.code, kind: "student", name: selected.holder_name, organization: printed(selected).organization, roleLabel: null, logoUrl: printed(selected).logoUrl }
+      : { code: selected.code, kind: selected.kind, name: draft.holder_name.trim() || null, organization: draft.organization.trim() || null, roleLabel: selected.kind === "delegate" ? draft.role_label.trim() || null : null }
     : null;
 
   return (
@@ -151,7 +162,7 @@ export function TicketDesk({ tickets, event, programmePending }: { tickets: Tick
               <Button variant="outline" loading={!!progress} disabled={!filtered.length}>{!progress && <Download />} {progress ?? "Download"} {!progress && <ChevronDown aria-hidden className="opacity-60" />}</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuLabel>{pluralize(filtered.length, "ticket")} shown</DropdownMenuLabel>
+              <DropdownMenuLabel>{pluralize(downloadable.length, "ticket")} shown</DropdownMenuLabel>
               <DropdownMenuItem onSelect={() => bulk("pdf")}><FileText aria-hidden /> One PDF, a ticket per page</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => bulk("png")}><FileImage aria-hidden /> PNG images in a .zip</DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -176,7 +187,7 @@ export function TicketDesk({ tickets, event, programmePending }: { tickets: Tick
       <div className="scroll-none -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <FilterChip active={kind === "all"} count={counts.all} onClick={() => { setParams({ kind: null }); setShown(PAGE); }}>All tickets</FilterChip>
         {TICKET_KIND_ORDER.map((k) => (
-          <FilterChip key={k} active={kind === k} count={counts[k]} onClick={() => { setParams({ kind: k }); setShown(PAGE); }}>{k === "paid" ? "Ticket holders" : k === "delegate" ? "Delegates" : "Complimentary"}</FilterChip>
+          <FilterChip key={k} active={kind === k} count={counts[k]} onClick={() => { setParams({ kind: k }); setShown(PAGE); }}>{k === "paid" ? "Ticket holders" : k === "delegate" ? "Delegates" : k === "student" ? "Students" : "Complimentary"}</FilterChip>
         ))}
       </div>
 
@@ -206,7 +217,7 @@ export function TicketDesk({ tickets, event, programmePending }: { tickets: Tick
                       <td className="px-3 py-3"><Badge tone={TICKET_KIND[t.kind].tone} icon={TICKET_KIND[t.kind].icon}>{kindLabel(t)}</Badge></td>
                       <td className="px-3 py-3"><StatusMenu value={t.status} meta={TICKET_STATUS} order={TICKET_STATUS_ORDER} label={`Ticket ${t.code}`} disabled={!manage} onChange={(next) => changeStatus(t.id, next)} /></td>
                       <td className="px-3 py-3 text-ink-3">{formatDate(t.created_at)}</td>
-                      <td className="px-5 py-2 text-right">{t.status === "void" ? <span className="text-ink-3">—</span> : <TicketDownload ticket={t} event={event} />}</td>
+                      <td className="px-5 py-2 text-right">{t.status === "void" ? <span className="text-ink-3">—</span> : <TicketDownload ticket={printed(t)} event={event} />}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -220,7 +231,7 @@ export function TicketDesk({ tickets, event, programmePending }: { tickets: Tick
                       <span className={t.holder_name ? "block truncate text-[13px] font-bold text-ink" : "block truncate text-[13px] text-ink-3"}>{holderLabel(t)}</span>
                       <span className="mt-0.5 block font-mono text-xs font-semibold text-ink-2">{t.code}</span>
                     </button>
-                    {t.status !== "void" && <TicketDownload ticket={t} event={event} />}
+                    {t.status !== "void" && <TicketDownload ticket={printed(t)} event={event} />}
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <Badge tone={TICKET_KIND[t.kind].tone} icon={TICKET_KIND[t.kind].icon} size="sm">{kindLabel(t)}</Badge>
@@ -256,11 +267,12 @@ export function TicketDesk({ tickets, event, programmePending }: { tickets: Tick
             <TicketPreview face={face} event={event} />
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <StatusMenu value={selected.status} meta={TICKET_STATUS} order={TICKET_STATUS_ORDER} label={`Ticket ${selected.code}`} disabled={!manage} onChange={(next) => changeStatus(selected.id, next)} />
-              <TicketDownload variant="button" ticket={{ code: face.code, kind: face.kind, holder_name: face.name, organization: face.organization, role_label: face.roleLabel }} event={event} />
+              <TicketDownload variant="button" ticket={{ code: face.code, kind: face.kind, holder_name: face.name, organization: face.organization, role_label: face.roleLabel, logoUrl: face.logoUrl }} event={event} />
             </div>
             {selected.status === "checked_in" && selected.checked_in_at && <p className="mt-2 text-xs text-ink-3">Checked in {formatDate(selected.checked_in_at)}.</p>}
             {selected.status === "void" && <p className="mt-2 text-xs font-medium text-critical-ink">This ticket is void and should not be admitted.</p>}
 
+            {selected.kind === "student" && <p className="mt-4 text-xs text-ink-3">A student ticket. <Link className="font-semibold text-accent-ink hover:underline" href={`/tickets?tab=students&student=${selected.id}`}>Open it in the Students tab</Link> to change the student&apos;s details.</p>}
             <form id="ticket-form" className="mt-5 grid gap-4 border-t border-line pt-4" onSubmit={(e) => { e.preventDefault(); save({ ...draft, id: selected.id }); }}>
               <Field label="Name on the ticket" htmlFor="ticket-name" optional={selected.kind === "complimentary"} hint={selected.kind === "complimentary" ? "Leave empty to keep it a blank complimentary ticket." : undefined}>
                 <Input id="ticket-name" disabled={!editable} required={selected.kind !== "complimentary"} value={draft.holder_name} onChange={(e) => setDraft({ ...draft, holder_name: e.target.value })} />
@@ -328,10 +340,10 @@ function RoleField({ id, value, onChange, disabled }: { id: string; value: strin
 }
 
 /** The ticket exactly as it will download, redrawn as the form changes. */
-function TicketPreview({ face, event }: { face: TicketFace; event: TicketEvent }) {
+export function TicketPreview({ face, event }: { face: TicketFace; event: TicketEvent }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [failed, setFailed] = useState(false);
-  const { code, kind, name, organization, roleLabel } = face;
+  const { code, kind, name, organization, roleLabel, logoUrl } = face;
   const { dateLine, venueLine, admitLabel } = event;
 
   useEffect(() => {
@@ -339,13 +351,13 @@ function TicketPreview({ face, event }: { face: TicketFace; event: TicketEvent }
     const timer = window.setTimeout(() => {
       const canvas = ref.current;
       if (!canvas) return;
-      paintTicket(canvas, { code, kind, name, organization, roleLabel }, { dateLine, venueLine, admitLabel }).then(
+      paintTicket(canvas, { code, kind, name, organization, roleLabel, logoUrl }, { dateLine, venueLine, admitLabel }).then(
         () => { if (!cancelled) setFailed(false); },
         () => { if (!cancelled) setFailed(true); },
       );
     }, 150);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [code, kind, name, organization, roleLabel, dateLine, venueLine, admitLabel]);
+  }, [code, kind, name, organization, roleLabel, logoUrl, dateLine, venueLine, admitLabel]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-surface-2">

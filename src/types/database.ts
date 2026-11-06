@@ -1555,6 +1555,9 @@ export type Database = {
           checked_in_at: string | null
           code: string
           created_at: string
+          details_completed_at: string | null
+          download_count: number
+          first_downloaded_at: string | null
           holder_email: string | null
           holder_name: string | null
           holder_phone: string | null
@@ -1565,16 +1568,21 @@ export type Database = {
           notes: string | null
           organization: string | null
           panelist_id: string | null
+          programme: string | null
           role_label: string | null
           sale_id: string | null
           seq: number
           status: string
+          student_number: string | null
           updated_at: string
         }
         Insert: {
           checked_in_at?: string | null
           code?: string
           created_at?: string
+          details_completed_at?: string | null
+          download_count?: number
+          first_downloaded_at?: string | null
           holder_email?: string | null
           holder_name?: string | null
           holder_phone?: string | null
@@ -1585,16 +1593,21 @@ export type Database = {
           notes?: string | null
           organization?: string | null
           panelist_id?: string | null
+          programme?: string | null
           role_label?: string | null
           sale_id?: string | null
           seq?: never
           status?: string
+          student_number?: string | null
           updated_at?: string
         }
         Update: {
           checked_in_at?: string | null
           code?: string
           created_at?: string
+          details_completed_at?: string | null
+          download_count?: number
+          first_downloaded_at?: string | null
           holder_email?: string | null
           holder_name?: string | null
           holder_phone?: string | null
@@ -1605,10 +1618,12 @@ export type Database = {
           notes?: string | null
           organization?: string | null
           panelist_id?: string | null
+          programme?: string | null
           role_label?: string | null
           sale_id?: string | null
           seq?: never
           status?: string
+          student_number?: string | null
           updated_at?: string
         }
         Relationships: [

@@ -1,4 +1,4 @@
-import { MicVocal, Sparkles, Ticket, UsersRound } from "lucide-react";
+import { GraduationCap, MicVocal, Sparkles, Ticket, UsersRound } from "lucide-react";
 import { StatTile } from "@/components/charts/stat-tile";
 import type { Attendance } from "@/lib/attendance";
 import { cn, formatNumber, pluralize } from "@/lib/utils";
@@ -19,22 +19,23 @@ type Props = {
 };
 
 export function AttendanceSummary({ attendance, capacity, countBlank = true, linked, className }: Props) {
-  const { paid, paidOnline, paidByInstitution, delegates, complimentary, complimentaryNamed } = attendance;
+  const { paid, paidOnline, paidByInstitution, delegates, complimentary, complimentaryNamed, students } = attendance;
   const firm = paid + delegates;
-  const everyone = firm + (countBlank ? complimentary : complimentaryNamed);
+  const everyone = firm + (countBlank ? complimentary : complimentaryNamed) + students;
   const href = (kind?: string) => (linked ? `/tickets?tab=tickets${kind ? `&kind=${kind}` : ""}` : undefined);
 
   return (
-    <section aria-label="Attendees so far" className={cn("grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5", className)}>
+    <section aria-label="Attendees so far" className={cn("grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-6", className)}>
       <StatTile label="Ticket holders" value={formatNumber(paid)} icon={Ticket} href={href("paid")} caption={paid ? `${formatNumber(paidOnline)} via Paystack · ${formatNumber(paidByInstitution)} by institutions` : "Paid tickets issued"} />
       <StatTile label="Delegates" value={formatNumber(delegates)} icon={MicVocal} href={href("delegate")} caption="Chairperson, panel members, moderators and guests" />
       <StatTile label="Complimentary" value={formatNumber(complimentary)} icon={Sparkles} href={href("complimentary")}
         caption={complimentary ? `${formatNumber(complimentaryNamed)} named · ${formatNumber(complimentary - complimentaryNamed)} still blank` : "None issued yet"} />
+      <StatTile label="Students" value={formatNumber(students)} icon={GraduationCap} href={href("student")} caption={students ? "Complimentary student tickets" : "None issued yet"} />
       <StatTile label="Total without complimentary" value={formatNumber(firm)} icon={UsersRound} href={href()} caption="Ticket holders + delegates" />
       <div className="col-span-2 lg:col-span-1">
         <StatTile label="Total with complimentary" value={formatNumber(everyone)} unit={capacity ? `of ${formatNumber(capacity)}` : undefined} icon={UsersRound} tone="good" href={href()}
           meter={capacity ? { value: everyone, max: capacity, tone: "gold" } : undefined}
-          caption={`${capacity ? `${pluralize(Math.max(0, capacity - everyone), "seat")} left` : "Everyone with a ticket"}${countBlank || complimentary === complimentaryNamed ? "" : " · blank complimentary not counted"}`} />
+          caption={`${capacity ? `${pluralize(Math.max(0, capacity - everyone), "seat")} left` : "Everyone with a ticket"}${students ? " · includes students" : ""}${countBlank || complimentary === complimentaryNamed ? "" : " · blank complimentary not counted"}`} />
       </div>
     </section>
   );

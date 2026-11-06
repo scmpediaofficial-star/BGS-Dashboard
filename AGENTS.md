@@ -20,6 +20,7 @@ export PATH="$HOME/.nvm/versions/node/v24.19.0/bin:$PATH"   # supabase-js needs 
 npm run db:start      # local Supabase (Docker Desktop must be running)
 npm run dev           # http://localhost:3000
 npx tsc --noEmit      # typecheck — must stay clean
+npm run dev:live      # same, but against the LIVE Supabase project: copy .env.live.example → .env.live and fill in the keys first. Writes are real.
 ```
 
 ## Architecture (read before adding a feature)
@@ -39,6 +40,7 @@ npx tsc --noEmit      # typecheck — must stay clean
 | Settings | `src/lib/settings.ts` | `getSettings()` / `saveSetting()`; event facts live in `app_settings`, not in code. |
 | Paystack | `src/lib/paystack.ts`, `paystack-sync.ts` | Called with `PAYSTACK_SECRET_KEY`, so RLS does not apply: check a `payments.*` capability first, and return only the trimmed shapes from `paystack.ts`. `syncPaystackSales()` turns each successful payment into one `ticket_sales` row (unique on `paystack_id`); the manual button, `/api/paystack/webhook` and the scheduler all call it. |
 | Tickets | `supabase/migrations/*_paystack_tickets.sql`, `src/components/tickets/ticket-art.ts` | One `tickets` row per person admitted (`paid`, `delegate`, `complimentary`), each with a unique code. Paid tickets are issued and voided by the `sync_sale_tickets` trigger as their sale changes — never insert them by hand. The e-ticket (PNG/PDF) is drawn in the browser on `public/brand/ticket-template.jpg`. Headcounts come from `getAttendance()`. |
+| Student tickets | `supabase/migrations/*_student_tickets.sql`, `src/app/(app)/tickets/student-actions.ts`, `src/app/(auth)/student-ticket/` | `kind = 'student'`, complimentary, tied to an institution (its name and logo print on the e-ticket). Students collect their own at the public `/student-ticket` with the ticket code, and must give programme, email and phone first; that page uses the service client, keyed only on the code. Only `tickets.manage` may download student tickets from the dashboard. The student list is personal data: never put it in a migration (the repo is public). |
 | Email | `src/lib/email/templates.ts`, `send.ts` | Hand-built table HTML (React Email is deprecated). Without `RESEND_API_KEY` mail is logged to `email_log` as `skipped`, with its HTML, instead of sent. |
 
 ## UI conventions

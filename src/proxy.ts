@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured, publicEnv } from "@/lib/env";
 
 /** Routes that render without a session. */
-const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password", "/accept-invite", "/setup", "/offline", "/virtual-access", "/auth"];
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password", "/accept-invite", "/setup", "/offline", "/virtual-access", "/student-ticket", "/auth"];
 
 /**
  * Refreshes the Supabase session cookie on every request and performs the

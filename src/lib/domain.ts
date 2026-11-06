@@ -1,5 +1,5 @@
 import {
-  Ban, CircleCheck, CircleDashed, CircleDot, CircleX, DoorOpen, Eye, FileEdit, Flag, Hourglass, Inbox, LoaderCircle,
+  Ban, CircleCheck, CircleDashed, CircleDot, CircleX, DoorOpen, Eye, FileEdit, Flag, GraduationCap, Hourglass, Inbox, LoaderCircle,
   MailCheck, MicVocal, Send, Signal, SignalHigh, SignalLow, SignalMedium, Sparkles, ThumbsUp, Ticket, Timer, TriangleAlert, Handshake, Undo2,
   type LucideIcon,
 } from "lucide-react";
@@ -97,13 +97,14 @@ export const TICKET_CHANNELS = [
   { value: "other", label: "Other" },
 ] as const;
 
-export type TicketKind = "paid" | "delegate" | "complimentary";
+export type TicketKind = "paid" | "delegate" | "complimentary" | "student";
 export const TICKET_KIND: Record<TicketKind, Meta> = {
   paid: { label: "Ticket holder", tone: "accent", icon: Ticket, color: "var(--chart-1)" },
   delegate: { label: "Delegate", tone: "navy", icon: MicVocal, color: "var(--chart-2)" },
   complimentary: { label: "Complimentary", tone: "gold", icon: Sparkles, color: "var(--chart-3)" },
+  student: { label: "Student", tone: "good", icon: GraduationCap, color: "var(--chart-4)" },
 };
-export const TICKET_KIND_ORDER: TicketKind[] = ["paid", "delegate", "complimentary"];
+export const TICKET_KIND_ORDER: TicketKind[] = ["paid", "delegate", "complimentary", "student"];
 
 export type TicketStatus = "valid" | "checked_in" | "void";
 export const TICKET_STATUS: Record<TicketStatus, Meta> = {

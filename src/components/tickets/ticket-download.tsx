@@ -4,11 +4,12 @@ import { useState } from "react";
 import { Download, FileArchive, FileImage, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { saveBlob, ticketFileName, ticketPng, ticketsPdf, ticketsPngZip, type TicketEvent, type TicketFace } from "@/components/tickets/ticket-art";
+import { useViewer } from "@/components/shell/session-context";
 import { toFace, type TicketRow } from "@/components/tickets/types";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown";
 
-export type TicketLike = Pick<TicketRow, "code" | "kind" | "holder_name" | "organization" | "role_label">;
+export type TicketLike = Pick<TicketRow, "code" | "kind" | "holder_name" | "organization" | "role_label"> & { /** The institution logo printed on a student ticket. */ logoUrl?: string | null };
 
 type Props = {
   /** One ticket … */
@@ -23,14 +24,17 @@ type Props = {
 /** Saves an e-ticket as a PNG image or a PDF. With several tickets: one PDF (a page each) or a .zip of PNGs. */
 export function TicketDownload({ ticket, tickets, event, variant = "label" }: Props) {
   const [busy, setBusy] = useState(false);
+  const { can } = useViewer();
   const list = tickets ?? (ticket ? [ticket] : []);
   if (!list.length) return null;
+  // Student tickets are handed out through the student page; only people who manage tickets may download them from here.
+  if (list.some((t) => t.kind === "student") && !can("tickets.manage")) return null;
   const many = list.length > 1;
 
   async function download(format: "png" | "pdf") {
     setBusy(true);
     try {
-      const faces = list.map(toFace);
+      const faces = list.map((t) => toFace(t, t.logoUrl));
       if (!many) {
         saveBlob(format === "png" ? await ticketPng(faces[0], event) : await ticketsPdf(faces, event), `${ticketFileName(faces[0])}.${format}`);
       } else {
