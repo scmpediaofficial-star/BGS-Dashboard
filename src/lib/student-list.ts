@@ -2,11 +2,11 @@
  * Reads a pasted student list into { name, number } rows.
  *
  * It copes with the way lists really arrive from WhatsApp and Word:
- *   "1. Simon Adeti 10331270"            number after the name
- *   "4. Clement Dodzi Awagah-10331918"   glued on with a dash
- *   "12. Agblobi-Tetteh Comfort-10335122" a hyphen inside the name is kept
- *   "18. Priscilla Opoku Agyeman" + "19. 10331581"   name and number on separate lines
- *   "Hamdan Abdulai, 10349479"            commas and tabs (a spreadsheet paste)
+ *   "1. Ama Mensah 10000001"             number after the name
+ *   "4. Kofi Boateng-10000002"           glued on with a dash
+ *   "12. Esi Owusu-Ansah-10000003"       a hyphen inside the name is kept
+ *   "18. Yaw Asante" + "19. 10000004"   name and number on separate lines
+ *   "Abena Darko, 10000005"              commas and tabs (a spreadsheet paste)
  * Pure and dependency-free, so the form previews it and the server re-reads it.
  */
 

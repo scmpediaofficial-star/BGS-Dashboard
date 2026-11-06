@@ -290,7 +290,7 @@ export function StudentDesk({ tickets, institutions, event }: { tickets: TicketR
               <Select id="import-institution" value={pasted.institution_id || defaultInstitution} onChange={(e) => setPasted({ ...pasted, institution_id: e.target.value })}>{institutions.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</Select>
             </Field>
             <Field label="Students" htmlFor="import-text" hint="Paste straight from WhatsApp, Word or a spreadsheet.">
-              <Textarea id="import-text" rows={8} placeholder={"1. Simon Adeti 10331270\n2. Agness Peprah Ankomah - 10331670"} value={pasted.text} onChange={(e) => setPasted({ ...pasted, text: e.target.value })} />
+              <Textarea id="import-text" rows={8} placeholder={"1. Ama Mensah 10000001\n2. Kofi Boateng - 10000002"} value={pasted.text} onChange={(e) => setPasted({ ...pasted, text: e.target.value })} />
             </Field>
             {pasted.text.trim() && (
               <div className="rounded-lg border border-line bg-surface-2 p-3 text-xs">
