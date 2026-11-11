@@ -6,6 +6,7 @@ import { ActionError, f, run, type ActionResult } from "@/lib/actions";
 import { getSession, PermissionError, requireCapability } from "@/lib/auth/session";
 import { recordEvent } from "@/lib/events";
 import { createCustomer, createPaymentLink, createRefund, getPayment, setCustomerRisk, updateCustomer } from "@/lib/paystack";
+import { closeCheckoutsIfDue, scheduleCheckoutClose, setCheckoutsOpen } from "@/lib/paystack-checkout";
 import { autoSyncPaystack, syncPaystackSales, type SyncResult } from "@/lib/paystack-sync";
 import { getSettings } from "@/lib/settings";
 import { formatMoney, truncate } from "@/lib/utils";
@@ -34,8 +35,9 @@ export async function syncPayments(): Promise<ActionResult<SyncResult>> {
 export async function checkForPayments(): Promise<ActionResult<{ changed: boolean }>> {
   return run(async () => {
     if (!(await getSession())) throw new PermissionError("Your session has expired. Please sign in again.");
-    const result = await autoSyncPaystack();
-    const changed = Boolean(result && (result.imported || result.linked || result.refunded || result.customers));
+    // A scheduled close of online payments is carried out by whichever screen notices its time first.
+    const [result, closed] = await Promise.all([autoSyncPaystack(), closeCheckoutsIfDue()]);
+    const changed = closed || Boolean(result && (result.imported || result.linked || result.refunded || result.customers));
     if (changed) revalidatePath("/", "layout");
     return { changed };
   });
@@ -103,4 +105,29 @@ export async function refundPayment(input: { paymentId: number; amount?: number 
     revalidatePath("/", "layout");
     return undefined;
   }, "Refund sent to Paystack");
+}
+
+/** "Close all now" / "Reopen all": every Paystack payment page and product at once. */
+export async function setOnlinePayments(open: boolean): Promise<ActionResult<{ changed: number; failed: string[] }>> {
+  return run(async () => {
+    const { profile } = await requireCapability("payments.manage");
+    const result = await setCheckoutsOpen(z.boolean().parse(open), { id: profile.id, name: profile.full_name });
+    revalidatePath("/payments");
+    if (result.failed.length && !result.changed.length) {
+      throw new ActionError(`Paystack did not ${open ? "reopen" : "close"} ${result.failed.map((c) => c.name).join(", ")}. Change ${result.failed.length === 1 ? "it" : "them"} in the Paystack dashboard.`);
+    }
+    return { changed: result.changed.length, failed: result.failed.map((c) => c.name) };
+  });
+}
+
+/** Sets, or with null cancels, the time online payments close by themselves. */
+export async function scheduleOnlinePaymentsClose(closeAt: string | null): Promise<ActionResult<null>> {
+  return run(async () => {
+    const { profile } = await requireCapability("payments.manage");
+    const when = z.iso.datetime({ offset: true }).nullable().parse(closeAt);
+    if (when && Date.parse(when) < Date.now() - 60_000) throw new ActionError("Pick a time that is still ahead, or press Close all now.");
+    await scheduleCheckoutClose(when ? new Date(when).toISOString() : null, { id: profile.id, name: profile.full_name });
+    revalidatePath("/payments");
+    return null;
+  });
 }

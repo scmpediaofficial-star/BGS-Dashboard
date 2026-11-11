@@ -311,6 +311,52 @@ export async function listPaymentPages(): Promise<{ items: PaystackPage[]; trunc
   };
 }
 
+/** Switches a payment page's link on or off. An inactive page refuses new payments. */
+export async function setPageActive(id: number, active: boolean): Promise<boolean> {
+  const { data } = await request<RawPage>(`/page/${id}`, { method: "PUT", body: { active } });
+  return data?.active !== false;
+}
+
+// ── Products (sold at paystack.com/buy/…) ───────────────────────────────────
+type RawProduct = {
+  id: number; name: string; description?: string | null; price?: number | null; currency?: string | null; slug?: string | null;
+  active?: boolean | null; in_stock?: boolean | null; unlimited?: boolean | null; quantity?: number | null; quantity_sold?: number | null;
+};
+export type PaystackProduct = {
+  id: number; name: string; price: number | null; currency: string; url: string | null;
+  active: boolean; inStock: boolean; unlimited: boolean; quantity: number | null; sold: number;
+};
+
+function toProduct(raw: RawProduct): PaystackProduct {
+  return {
+    id: raw.id, name: raw.name, price: raw.price ? major(raw.price) : null, currency: raw.currency ?? "GHS", url: raw.slug ? `https://paystack.com/buy/${raw.slug}` : null,
+    active: raw.active !== false, inStock: raw.in_stock !== false, unlimited: raw.unlimited !== false, quantity: raw.quantity ?? null, sold: raw.quantity_sold ?? 0,
+  };
+}
+
+export async function listProducts(): Promise<{ items: PaystackProduct[]; truncated: boolean }> {
+  const { items, truncated } = await listAll<RawProduct>("/product");
+  return { items: items.map(toProduct), truncated };
+}
+
+export async function getProduct(id: number): Promise<PaystackProduct> {
+  const { data } = await request<RawProduct>(`/product/${id}`);
+  return toProduct(data);
+}
+
+/**
+ * Changes a product. Paystack's update expects the product's name, price and currency
+ * with every change, so they are sent back as they are.
+ */
+export async function updateProduct(id: number, patch: { active?: boolean; unlimited?: boolean; quantity?: number }): Promise<PaystackProduct> {
+  const { data: current } = await request<RawProduct>(`/product/${id}`);
+  const { data } = await request<RawProduct>(`/product/${id}`, {
+    method: "PUT",
+    body: { name: current.name, ...(text(current.description) ? { description: current.description } : {}), price: current.price, currency: current.currency, ...patch },
+  });
+  return toProduct(data ?? current);
+}
+
 export type PaystackBalance = { currency: string; balance: number };
 
 export async function getBalance(): Promise<PaystackBalance[]> {

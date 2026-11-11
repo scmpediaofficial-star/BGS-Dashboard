@@ -1,6 +1,7 @@
 import type { TicketEvent } from "@/components/tickets/ticket-art";
 import type { TicketLike } from "@/components/tickets/ticket-download";
 import type { PaymentStatus } from "@/lib/domain";
+import type { Checkout, CheckoutSchedule } from "@/lib/paystack-checkout";
 import type { PaystackBalance, PaystackCustomer, PaystackDispute, PaystackPage, PaystackPayment, PaystackPayout, PaystackRefund } from "@/lib/paystack";
 
 export const PAYMENT_TABS = ["transactions", "customers", "refunds", "payouts", "disputes", "pages"] as const;
@@ -33,6 +34,10 @@ export type PaymentsData = {
   ledgerTotals: { currency: string; paystack: number; paystackTickets: number; outside: number; outsideTickets: number; total: number; totalTickets: number };
   /** Date and venue lines printed on the e-ticket. */
   event: TicketEvent;
+  /** Every Paystack payment page and product, open or closed — null when Paystack could not list them. */
+  checkouts: Checkout[] | null;
+  checkoutSchedule: CheckoutSchedule | null;
 };
 
+export type { Checkout, CheckoutSchedule };
 export type { PaystackCustomer, PaystackDispute, PaystackPage, PaystackPayment, PaystackPayout, PaystackRefund };

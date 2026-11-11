@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { cronSecret, safeEqual } from "@/lib/crypto";
 import { isPaystackConfigured } from "@/lib/paystack";
+import { closeCheckoutsIfDue } from "@/lib/paystack-checkout";
 import { autoSyncPaystack } from "@/lib/paystack-sync";
 import { dispatchDuePosts, tendAccountsHourly } from "@/lib/social/dispatch";
 
@@ -24,8 +25,10 @@ async function handle(request: Request) {
     await tendAccountsHourly();
     // autoSyncPaystack never throws, so a Paystack hiccup cannot fail the publishing run.
     const paystack = isPaystackConfigured() ? await autoSyncPaystack(45) : null;
-    if (paystack && (paystack.imported || paystack.linked || paystack.refunded || paystack.customers)) revalidatePath("/", "layout");
-    return Response.json({ ok: true, ...result, ...(paystack ? { paystack } : {}) });
+    // A scheduled close of online payments (Payments page) happens here when its minute comes. Never throws.
+    const checkoutsClosed = await closeCheckoutsIfDue();
+    if (checkoutsClosed || (paystack && (paystack.imported || paystack.linked || paystack.refunded || paystack.customers))) revalidatePath("/", "layout");
+    return Response.json({ ok: true, ...result, ...(paystack ? { paystack } : {}), ...(checkoutsClosed ? { checkoutsClosed } : {}) });
   } catch (error) {
     console.error("[dispatch]", error);
     return Response.json({ ok: false, error: "Dispatch failed" }, { status: 500 });

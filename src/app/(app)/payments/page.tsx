@@ -8,6 +8,7 @@ import { requireRole, type Session } from "@/lib/auth/session";
 import type { PaymentStatus, TicketKind } from "@/lib/domain";
 import { getSettings } from "@/lib/settings";
 import { siteUrl } from "@/lib/env";
+import { closeCheckoutsIfDue, getCheckoutSchedule, listCheckouts } from "@/lib/paystack-checkout";
 import { lastPaystackCheck, syncPaystackSales } from "@/lib/paystack-sync";
 import { getBalance, isPaystackConfigured, listCustomers, listDisputes, listPaymentPages, listPayments, listPayouts, listRefunds, paystackMode } from "@/lib/paystack";
 
@@ -58,7 +59,9 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
 
   let data: PaymentsData;
   try {
-    const [payments, balance, firstLedger, settings, types, customers, refunds, payouts, disputes, pages] = await Promise.all([
+    // A scheduled close that is due happens before anything is shown, so the page never shows payments open past their time.
+    await closeCheckoutsIfDue();
+    const [payments, balance, firstLedger, settings, types, customers, refunds, payouts, disputes, pages, checkouts, checkoutSchedule] = await Promise.all([
       listPayments(),
       getBalance(),
       loadLedger(supabase),
@@ -69,6 +72,8 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
       tab === "payouts" ? listPayouts() : null,
       tab === "disputes" ? listDisputes() : null,
       tab === "pages" ? listPaymentPages() : null,
+      listCheckouts().catch((error) => { console.error("[payments] could not list checkouts:", error); return null; }),
+      getCheckoutSchedule().catch(() => null),
     ]);
     // A successful payment that the ledger doesn't hold yet is imported here and now.
     let ledger = firstLedger;
@@ -94,6 +99,8 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
       ticket: { price: types.data?.[0]?.price ?? null, currency: types.data?.[0]?.currency ?? "GHS" },
       event: ticketEvent(settings.event, settings.tickets),
       autoImport: settings.tickets.auto_import,
+      checkouts,
+      checkoutSchedule,
     };
   } catch (error) {
     if (!(error instanceof ActionError)) throw error;

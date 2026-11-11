@@ -7,6 +7,7 @@ import { Banknote, Building2, CircleCheck, Coins, Copy, ExternalLink, Landmark, 
 import { syncPayments } from "@/app/(app)/payments/actions";
 import { StatTile } from "@/components/charts/stat-tile";
 import { CustomersTab } from "@/components/payments/customers-tab";
+import { OnlinePaymentsCard } from "@/components/payments/online-payments-card";
 import { copyText, StateBadge } from "@/components/payments/shared";
 import { TransactionsTab } from "@/components/payments/transactions-tab";
 import { useAutoImport } from "@/components/payments/use-auto-import";
@@ -72,6 +73,8 @@ export function PaymentsView({ tab, data, webhookUrl }: { tab: PaymentTab; data:
           </>
         }
       />
+
+      <OnlinePaymentsCard checkouts={data.checkouts} schedule={data.checkoutSchedule} />
 
       <section aria-label="Paystack at a glance" className="mb-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatTile label="Collected" value={formatMoney(collected, currency, true)} icon={Banknote} tone="good" caption={`${pluralize(successful.length, "successful payment")} · ${formatMoney(fees, currency)} in fees`} />
