@@ -10,7 +10,9 @@ import { getSettings } from "@/lib/settings";
 import { siteUrl } from "@/lib/env";
 import { closeCheckoutsIfDue, getCheckoutSchedule, listCheckouts } from "@/lib/paystack-checkout";
 import { lastPaystackCheck, syncPaystackSales } from "@/lib/paystack-sync";
-import { getBalance, isPaystackConfigured, listCustomers, listDisputes, listPaymentPages, listPayments, listPayouts, listRefunds, paystackMode } from "@/lib/paystack";
+import { getBalance, isPaystackConfigured, listCustomers, listDisputes, listPaymentPages, listPayments, listPayouts, listRefunds, listRegistrations, paystackMode } from "@/lib/paystack";
+import { buildRegistrants } from "@/components/payments/registrants";
+import { formatDate, formatTime } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Payments" };
 
@@ -71,10 +73,11 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
       tab === "refunds" ? listRefunds() : null,
       tab === "payouts" ? listPayouts() : null,
       tab === "disputes" ? listDisputes() : null,
-      tab === "pages" ? listPaymentPages() : null,
+      tab === "pages" || tab === "registrants" ? listPaymentPages() : null,
       listCheckouts().catch((error) => { console.error("[payments] could not list checkouts:", error); return null; }),
       getCheckoutSchedule().catch(() => null),
     ]);
+    const registrations = tab === "registrants" ? await listRegistrations() : null;
     // A successful payment that the ledger doesn't hold yet is imported here and now.
     let ledger = firstLedger;
     if (settings.tickets.auto_import && payments.items.some((p) => p.status === "success" && !ledger.byPayment[String(p.id)])) {
@@ -92,7 +95,15 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
       refunds: refunds?.items,
       payouts: payouts?.items,
       disputes: disputes?.items,
-      pages: pages?.items,
+      pages: tab === "pages" ? pages?.items : undefined,
+      registrants: registrations && pages
+        ? buildRegistrants({
+          registrations: registrations.items, pages: pages.items, truncated: registrations.truncated || pages.truncated,
+          seat: { price: types.data?.[0]?.price ?? null, currency: types.data?.[0]?.currency ?? "GHS" },
+          eventName: settings.event.name, eventLine: `${settings.event.venue}, ${settings.event.city}, on ${formatDate(settings.event.starts_at)}`,
+          generatedAt: `${formatDate(new Date())}, ${formatTime(new Date())}`,
+        })
+        : undefined,
       ledgerByPayment: ledger.byPayment,
       ledgerByCustomer: ledger.byCustomer,
       ledgerTotals: ledger.totals,

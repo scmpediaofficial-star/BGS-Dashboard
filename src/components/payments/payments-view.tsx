@@ -8,6 +8,7 @@ import { syncPayments } from "@/app/(app)/payments/actions";
 import { StatTile } from "@/components/charts/stat-tile";
 import { CustomersTab } from "@/components/payments/customers-tab";
 import { OnlinePaymentsCard } from "@/components/payments/online-payments-card";
+import { RegistrantsTab } from "@/components/payments/registrants-tab";
 import { copyText, StateBadge } from "@/components/payments/shared";
 import { TransactionsTab } from "@/components/payments/transactions-tab";
 import { useAutoImport } from "@/components/payments/use-auto-import";
@@ -99,6 +100,7 @@ export function PaymentsView({ tab, data, webhookUrl }: { tab: PaymentTab; data:
 
       <div className={cn("pt-5 transition-opacity", switching && "pointer-events-none opacity-50")} aria-busy={switching}>
         {tab === "transactions" && <TransactionsTab data={data} setParams={setParams} onSync={() => sync()} syncing={syncing} />}
+        {tab === "registrants" && <RegistrantsTab report={data.registrants} />}
         {tab === "customers" && <CustomersTab data={data} setParams={setParams} />}
         {tab === "refunds" && (
           <SimpleList

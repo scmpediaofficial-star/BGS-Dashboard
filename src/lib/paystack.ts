@@ -211,6 +211,38 @@ export async function listPayments(query: { status?: string; customer?: number }
   return { items: items.map(toPayment), truncated };
 }
 
+/** A successful payment with what the payer typed on the payment page (custom fields) and where they paid. */
+export type PaystackRegistration = {
+  id: number; reference: string; amount: number; currency: string; paidAt: string | null; method: string | null;
+  /** The page the payer came from, e.g. https://paystack.shop/pay/bgs2026zoom. */
+  referrer: string | null;
+  /** Set for product (paystack.com/buy/…) orders. */
+  orderId: number | null;
+  customer: { name: string; email: string | null; phone: string | null };
+  fields: { label: string; key: string; value: string }[];
+};
+
+export async function listRegistrations(): Promise<{ items: PaystackRegistration[]; truncated: boolean }> {
+  const { items, truncated } = await listAll<RawTransaction & { order_id?: number | null }>("/transaction", { status: "success" });
+  return {
+    truncated,
+    items: items.map((raw) => {
+      const payment = toPayment(raw);
+      const meta = (typeof raw.metadata === "string" ? (() => { try { return JSON.parse(raw.metadata as string); } catch { return null; } })() : raw.metadata) as { referrer?: unknown; custom_fields?: unknown } | null;
+      const fields = Array.isArray(meta?.custom_fields)
+        ? (meta.custom_fields as { display_name?: unknown; variable_name?: unknown; value?: unknown }[])
+          .map((field) => ({ label: text(field?.display_name) ?? text(field?.variable_name) ?? "", key: text(field?.variable_name) ?? "", value: field?.value === null || field?.value === undefined ? "" : String(field.value).trim() }))
+          .filter((field) => field.label && field.value)
+        : [];
+      return {
+        id: payment.id, reference: payment.reference, amount: payment.amount, currency: payment.currency, paidAt: payment.paidAt ?? payment.createdAt, method: payment.method,
+        referrer: text(meta?.referrer), orderId: typeof raw.order_id === "number" ? raw.order_id : null,
+        customer: { name: payment.customer.name, email: payment.customer.email, phone: payment.customer.phone }, fields,
+      };
+    }),
+  };
+}
+
 export async function getPayment(id: number): Promise<PaystackPayment> {
   const { data } = await request<RawTransaction>(`/transaction/${id}`);
   return toPayment(data);
