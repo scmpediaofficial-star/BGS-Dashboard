@@ -122,7 +122,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
           registrations: registrations.items, pages: pages.items, truncated: registrations.truncated || pages.truncated, admissions,
           seat: { price: types.data?.[0]?.price ?? null, currency: types.data?.[0]?.currency ?? "GHS" },
           eventName: settings.event.name, eventLine: `${settings.event.venue}, ${settings.event.city}, on ${formatDate(settings.event.starts_at)}`,
-          checkinLine: `${formatDate(settings.event.starts_at)} · ${settings.event.venue}, ${settings.event.city}`,
+          checkinLine: `${formatDate(settings.event.starts_at)} · ${settings.event.venue}, ${settings.event.city}`, eventStartsAt: settings.event.starts_at,
           generatedAt: `${formatDate(new Date())}, ${formatTime(new Date())}`,
         })
         : undefined,

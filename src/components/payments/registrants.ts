@@ -1,5 +1,5 @@
 import type { PaystackPage, PaystackRegistration } from "@/lib/paystack";
-import { formatDate, formatNumber, formatTime } from "@/lib/utils";
+import { formatDate, formatNumber, formatTime, isoDay } from "@/lib/utils";
 
 /**
  * Everyone coming to the summit, list by list: every valid in-person ticket
@@ -93,6 +93,8 @@ export function buildRegistrants(input: {
   registrations: PaystackRegistration[]; pages: PaystackPage[]; truncated: boolean; admissions: Admission[];
   seat: { price: number | null; currency: string }; eventName: string; eventLine: string; generatedAt: string;
   /** Under the app's title: "12 Nov 2026 · Labadi Beach Hotel, Accra". */ checkinLine: string;
+  /** When the summit starts (ISO). A ticket marked checked in before that day was handed out, not used at the door. */
+  eventStartsAt: string;
 }): RegistrantsReport {
   const pages = new Map(input.pages.map((p) => [slugOf(p.url) ?? "", p]));
   const seat = input.seat.price;
@@ -131,7 +133,11 @@ export function buildRegistrants(input: {
   const unnamed = admitted.filter((a) => !a.name?.trim()).sort((a, b) => a.code.localeCompare(b.code));
   const kinds = (list: Admission[]) => ["paid", "delegate", "complimentary", "student"].map((k) => [k, list.filter((a) => a.kind === k).length] as const).filter(([, n]) => n).map(([k, n]) => `${formatNumber(n)} ${KIND_PLURAL[k]}`).join(" · ");
   const ticketLabel = (a: Admission) => [KIND_LABEL[a.kind] ?? a.kind, a.role?.trim()].filter(Boolean).join(" · ");
-  const checked = admitted.filter((a) => a.checkedIn).length;
+  // The team marks complimentary tickets "checked in" when they hand them out. Only a check-in on the summit day
+  // (or later) means the person came through the door; anything earlier would turn guests away as "already entered".
+  const eventDay = isoDay(input.eventStartsAt);
+  const atDoor = (a: Admission) => a.checkedIn && Boolean(a.checkedInAt) && isoDay(a.checkedInAt!) >= eventDay;
+  const checked = admitted.filter(atDoor).length;
   const TICK: RegistrantColumn = { key: "tick", header: "Tick", width: 0.5, tickBox: true, printOnly: true };
   groups.push({
     key: "in-person", sheet: "In person - Names A-Z", currency, collected: null, count: named.length,
@@ -142,7 +148,7 @@ export function buildRegistrants(input: {
       { key: "code", header: "Ticket code", width: 1.35 }, TICK,
       { key: "buyer", header: "Bought by", width: 1.8, excelOnly: true }, { key: "status", header: "Checked in", width: 0.9, excelOnly: true }],
     rows: named.map((a, i) => ({ no: i + 1, name: a.name!.trim(), organisation: a.organisation ?? "", ticket: ticketLabel(a), code: a.code, tick: "",
-      buyer: a.buyer && a.buyer.trim().toLowerCase() !== a.name!.trim().toLowerCase() ? a.buyer : "", status: a.checkedIn ? "Yes" : "" })),
+      buyer: a.buyer && a.buyer.trim().toLowerCase() !== a.name!.trim().toLowerCase() ? a.buyer : "", status: atDoor(a) ? "Yes" : "" })),
   });
   if (unnamed.length) {
     groups.push({
@@ -152,7 +158,7 @@ export function buildRegistrants(input: {
       note: "These tickets are valid but nobody's name was recorded on them (mostly complimentary tickets handed out in batches). Check the code on the holder's e-ticket against this list (in code order), write their name in and tick the box.",
       columns: [NO, { key: "code", header: "Ticket code", width: 1.6 }, { key: "ticket", header: "Ticket", width: 1.6 }, { key: "organisation", header: "Organisation", width: 2.6 },
         { key: "written", header: "Name (write in)", width: 3.2, printOnly: true }, TICK, { key: "status", header: "Checked in", width: 0.9, excelOnly: true }],
-      rows: unnamed.map((a, i) => ({ no: i + 1, code: a.code, ticket: ticketLabel(a), organisation: a.organisation ?? "", written: "", tick: "", status: a.checkedIn ? "Yes" : "" })),
+      rows: unnamed.map((a, i) => ({ no: i + 1, code: a.code, ticket: ticketLabel(a), organisation: a.organisation ?? "", written: "", tick: "", status: atDoor(a) ? "Yes" : "" })),
     });
   }
 
@@ -189,7 +195,7 @@ export function buildRegistrants(input: {
     tickets: input.admissions.map((a) => ({
       c: a.code, k: a.kind, n: a.name?.trim() ?? "", o: a.organisation ?? "", r: a.role?.trim() ?? "", e: a.email?.trim().toLowerCase() ?? "", p: a.phone?.trim() ?? "",
       b: a.buyer?.trim() ?? "", be: a.buyerEmail?.trim().toLowerCase() ?? "", bp: a.buyerPhone?.trim() ?? "", pr: a.programme?.trim() ?? "", sn: a.studentNumber?.trim() ?? "",
-      ci: a.checkedIn ? a.checkedInAt ?? new Date().toISOString() : null,
+      ci: atDoor(a) ? a.checkedInAt : null,
       ...(a.paystackId !== null && zoomPayments.has(a.paystackId) ? { z: 1 as const } : {}),
     })),
   };
