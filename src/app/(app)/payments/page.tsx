@@ -54,7 +54,7 @@ async function loadAdmissions(supabase: Session["supabase"]): Promise<Admission[
   const rows: Admission[] = [];
   for (let from = 0; ; from += 1000) {
     const { data, error } = await supabase.from("tickets")
-      .select("code, kind, status, holder_name, organization, role_label, institution:institutions(name), sale:ticket_sales(buyer_name, organization, paystack_id, institution:institutions(name))")
+      .select("code, kind, status, holder_name, holder_email, holder_phone, organization, role_label, programme, student_number, checked_in_at, institution:institutions(name), sale:ticket_sales(buyer_name, buyer_email, buyer_phone, organization, paystack_id, institution:institutions(name))")
       .neq("status", "void").order("seq").range(from, from + 999);
     if (error) throw new Error(error.message);
     for (const t of data ?? []) {
@@ -62,6 +62,8 @@ async function loadAdmissions(supabase: Session["supabase"]): Promise<Admission[
         code: t.code, kind: t.kind, checkedIn: t.status === "checked_in", name: t.holder_name, role: t.role_label,
         organisation: t.organization?.trim() || t.institution?.name || t.sale?.institution?.name || t.sale?.organization?.trim() || null,
         buyer: t.sale?.buyer_name ?? null, paystackId: t.sale?.paystack_id ?? null,
+        email: t.holder_email, phone: t.holder_phone, buyerEmail: t.sale?.buyer_email ?? null, buyerPhone: t.sale?.buyer_phone ?? null,
+        programme: t.programme, studentNumber: t.student_number, checkedInAt: t.checked_in_at,
       });
     }
     if (!data || data.length < 1000) return rows;
@@ -120,6 +122,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
           registrations: registrations.items, pages: pages.items, truncated: registrations.truncated || pages.truncated, admissions,
           seat: { price: types.data?.[0]?.price ?? null, currency: types.data?.[0]?.currency ?? "GHS" },
           eventName: settings.event.name, eventLine: `${settings.event.venue}, ${settings.event.city}, on ${formatDate(settings.event.starts_at)}`,
+          checkinLine: `${formatDate(settings.event.starts_at)} · ${settings.event.venue}, ${settings.event.city}`,
           generatedAt: `${formatDate(new Date())}, ${formatTime(new Date())}`,
         })
         : undefined,

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { FileSpreadsheet, FileText, ShieldCheck, Ticket, TicketX, Users, Video } from "lucide-react";
+import { FileSpreadsheet, FileText, Laptop, ShieldCheck, Ticket, TicketX, Users, Video } from "lucide-react";
 import { toast } from "sonner";
 import { groupSummary, money, type RegistrantGroup, type RegistrantsReport } from "@/components/payments/registrants";
+import { checkinAppHtml } from "@/components/payments/checkin-app";
 import { registrantsPdf, registrantsXlsx } from "@/components/payments/registrants-export";
 import { saveBlob } from "@/components/tickets/ticket-art";
 import { Button } from "@/components/ui/button";
@@ -35,11 +36,34 @@ export function RegistrantsTab({ report }: { report: RegistrantsReport | undefin
       setBusy(null);
     }
   };
+  const downloadApp = async () => {
+    setBusy("checkin-app");
+    try {
+      saveBlob(await checkinAppHtml(report.kit), `BGS 2026 Check-in (${isoDay()}).html`);
+      toast.success("Check-in app downloaded. Double-click it to open.");
+    } catch (error) {
+      console.error(error);
+      toast.error("The check-in app could not be made. Refresh the page and try again.");
+    } finally {
+      setBusy(null);
+    }
+  };
+  const valid = report.kit.tickets.filter((t) => !t.z).length;
   const door = report.groups.filter((g) => DOOR.includes(g.key));
   const doorCount = door.reduce((n, g) => n + g.count, 0);
 
   return (
     <div className="grid gap-4">
+      <Card className="flex flex-wrap items-center justify-between gap-3 border-accent p-4 sm:px-5">
+        <div className="min-w-0 max-w-3xl">
+          <p className="flex items-center gap-2 text-sm font-bold text-ink"><Laptop aria-hidden className="size-4 text-accent-ink" /> Check-in app for the entrance (Mac and Windows, works offline)</p>
+          <p className="mt-0.5 text-xs text-ink-3">
+            One file holding all {formatNumber(valid)} valid in-person tickets. Copy it to each check-in laptop and double-click it: it opens in the browser with no internet and no installation.
+            Search by name, email, phone or ticket code, then mark people as entered (or unmark them). Ticks stay on that laptop. Download it again after new tickets are issued.
+          </p>
+        </div>
+        <Button loading={busy === "checkin-app"} onClick={downloadApp}>{busy !== "checkin-app" && <Laptop />} Download check-in app</Button>
+      </Card>
       <Card className="flex flex-wrap items-center justify-between gap-3 p-4 sm:px-5">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-bold text-ink"><ShieldCheck aria-hidden className="size-4 text-accent-ink" /> Door list for security</p>

@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>BGS 2026 · Entry check-in</title>
+<!--
+  BGS entry check-in. One file, no internet, no installation.
+  Made by the BGS Dashboard (Payments → Registrants → Download check-in app), which puts the ticket list
+  into the data block at the bottom. Ticks are kept in this browser on this computer (localStorage).
+-->
+<style>
+:root {
+  --purple: #804a95; --purple-deep: #673878; --purple-soft: #f4ecf8; --navy: #1e1c52; --navy-2: #2b2870;
+  --ink: #1e1c52; --ink-2: #4a4775; --ink-3: #77739c; --line: #e4ddec; --bg: #f5f2f8; --surface: #ffffff;
+  --good: #17703f; --good-soft: #e3f3e9; --good-line: #9fd3b4; --warn: #8a5300; --warn-soft: #fff1d6;
+  --bad: #b3261e; --bad-soft: #fde9e7; --gold: #7a5b00; --gold-soft: #fbf1cf; --navy-soft: #e7e6f5;
+  --radius: 14px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: Montserrat, "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg); color: var(--ink); font-size: 15px; line-height: 1.4; -webkit-font-smoothing: antialiased;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Top bar */
+.top { background: var(--navy); color: #fff; padding: 14px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.brand > div { min-width: 0; }
+.brand img { height: 40px; width: auto; display: block; }
+.brand .t1 { font-weight: 800; font-size: 18px; letter-spacing: .2px; }
+.brand .t2 { font-size: 12px; color: #c9c3e6; margin-top: 2px; overflow-wrap: anywhere; }
+.count { margin-left: auto; display: flex; align-items: center; gap: 18px; }
+.count .big { font-size: 28px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.count .of { font-size: 13px; color: #c9c3e6; margin-top: 4px; }
+.bar { width: 180px; height: 8px; border-radius: 99px; background: rgba(255,255,255,.18); overflow: hidden; margin-top: 8px; }
+.bar > i { display: block; height: 100%; background: #b98ccc; border-radius: 99px; width: 0; transition: width .25s; }
+.top .tools { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22); color: #fff; border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 13px; }
+.top .tools:hover { background: rgba(255,255,255,.2); }
+
+/* Warnings */
+.banner { padding: 10px 24px; font-size: 13px; font-weight: 600; display: none; }
+.banner.show { display: block; }
+.banner.bad { background: var(--bad-soft); color: var(--bad); border-bottom: 1px solid #f3c2bd; }
+
+/* Search */
+.wrap { max-width: 1180px; margin: 0 auto; padding: 20px 24px 120px; }
+.search { position: relative; }
+.search input {
+  width: 100%; font-size: 22px; padding: 18px 120px 18px 56px; border-radius: var(--radius); border: 2px solid var(--line);
+  background: var(--surface); outline: none; box-shadow: 0 1px 2px rgba(30,28,82,.06);
+}
+.search input:focus { border-color: var(--purple); box-shadow: 0 0 0 4px rgba(128,74,149,.15); }
+.search input::-webkit-search-cancel-button, .search input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+.search svg { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; color: var(--ink-3); pointer-events: none; }
+.search .clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); border: 0; background: var(--purple-soft); color: var(--purple-deep); border-radius: 9px; padding: 8px 12px; font-size: 13px; font-weight: 700; display: none; }
+.search .clear.show { display: block; }
+.hint { font-size: 12px; color: var(--ink-3); margin: 8px 2px 0; }
+.hint kbd { font-family: inherit; font-size: 11px; background: var(--surface); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; color: var(--ink-2); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0 10px; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 11px; padding: 3px; }
+.seg button { border: 0; background: transparent; padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.seg button[aria-pressed="true"] { background: var(--purple); color: #fff; }
+.chip { border: 1px solid var(--line); background: var(--surface); padding: 7px 12px; border-radius: 99px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.chip[aria-pressed="true"] { border-color: var(--purple); background: var(--purple-soft); color: var(--purple-deep); }
+.meta { margin-left: auto; font-size: 13px; color: var(--ink-3); }
+
+/* Results */
+.list { display: grid; gap: 10px; }
+.row {
+  background: var(--surface); border: 1px solid var(--line); border-left: 6px solid var(--line); border-radius: var(--radius);
+  padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center;
+}
+.row.sel { box-shadow: 0 0 0 3px rgba(128,74,149,.35); }
+.row.in { border-left-color: var(--good); background: #fbfefc; }
+.row.zoom { border-left-color: var(--bad); }
+.who { min-width: 0; }
+.name { font-size: 19px; font-weight: 800; color: var(--ink); overflow-wrap: anywhere; }
+.name.none { font-style: italic; font-weight: 600; color: var(--ink-3); }
+.line { font-size: 13.5px; color: var(--ink-2); margin-top: 3px; overflow-wrap: anywhere; }
+.sep { color: #c3bdd3; margin: 0 6px; }
+.small { font-size: 12.5px; color: var(--ink-3); margin-top: 4px; overflow-wrap: anywhere; }
+.code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-weight: 700; font-size: 14px; color: var(--ink); background: var(--purple-soft); padding: 2px 7px; border-radius: 6px; letter-spacing: .5px; }
+.copy { border: 0; background: transparent; color: var(--purple); font-size: 12px; font-weight: 700; padding: 2px 4px; margin-left: 2px; }
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; margin-right: 6px; vertical-align: 2px; }
+.k-paid { background: var(--purple-soft); color: var(--purple-deep); }
+.k-delegate { background: var(--navy-soft); color: var(--navy-2); }
+.k-complimentary { background: var(--gold-soft); color: var(--gold); }
+.k-student { background: var(--good-soft); color: var(--good); }
+.act { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.mark { border: 0; background: var(--purple); color: #fff; font-weight: 800; font-size: 16px; padding: 14px 22px; border-radius: 12px; min-width: 170px; }
+.mark:hover { background: var(--purple-deep); }
+.entered { display: inline-flex; align-items: center; gap: 8px; background: var(--good-soft); color: var(--good); border: 1px solid var(--good-line); font-weight: 800; font-size: 15px; padding: 10px 14px; border-radius: 12px; }
+.entered svg { width: 18px; height: 18px; }
+.when { font-size: 12px; color: var(--ink-3); text-align: right; }
+.unmark { border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-weight: 600; font-size: 12.5px; padding: 6px 12px; border-radius: 9px; }
+.unmark.confirm { border-color: var(--bad); color: #fff; background: var(--bad); }
+.stop { background: var(--bad-soft); color: var(--bad); font-weight: 800; padding: 10px 14px; border-radius: 12px; font-size: 14px; max-width: 280px; text-align: right; }
+.alert { margin: 0 0 10px; padding: 12px 16px; border-radius: 12px; font-weight: 700; font-size: 15px; }
+.alert.in { background: var(--good-soft); color: var(--good); border: 1px solid var(--good-line); }
+.alert.zoom { background: var(--bad-soft); color: var(--bad); border: 1px solid #f3c2bd; }
+.empty { text-align: center; padding: 48px 20px; color: var(--ink-3); background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); }
+.empty b { display: block; color: var(--ink); font-size: 18px; margin-bottom: 6px; }
+.more { text-align: center; font-size: 13px; color: var(--ink-3); padding: 12px; }
+
+/* Toast */
+.toasts { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: grid; gap: 8px; z-index: 30; width: min(560px, calc(100% - 32px)); }
+.toast { background: var(--navy); color: #fff; padding: 12px 14px 12px 16px; border-radius: 12px; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; box-shadow: 0 10px 30px rgba(30,28,82,.3); }
+.toast span { flex: 1; }
+.toast button { border: 0; background: rgba(255,255,255,.16); color: #fff; font-weight: 700; padding: 6px 12px; border-radius: 8px; }
+.toast.ok { background: var(--good); }
+.toast.warn { background: #8a3c00; }
+
+/* Tools dialog */
+dialog { border: 0; border-radius: 18px; padding: 0; width: min(620px, calc(100% - 32px)); box-shadow: 0 20px 60px rgba(30,28,82,.35); color: var(--ink); }
+dialog::backdrop { background: rgba(30,28,82,.45); }
+.dlg-h { padding: 18px 22px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+.dlg-h b { font-size: 17px; }
+.dlg-b { padding: 8px 22px 22px; }
+.tool { padding: 14px 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+.tool:last-child { border-bottom: 0; }
+.tool p { margin: 2px 0 0; font-size: 13px; color: var(--ink-3); }
+.tool .t { font-weight: 700; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-weight: 700; font-size: 13.5px; padding: 9px 14px; border-radius: 10px; white-space: nowrap; }
+.btn:hover { border-color: var(--purple); color: var(--purple-deep); }
+.btn.danger { color: var(--bad); }
+.btn.danger:hover { border-color: var(--bad); }
+.desk input { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; width: 200px; }
+.x { border: 0; background: transparent; font-size: 22px; line-height: 1; color: var(--ink-3); padding: 4px 8px; }
+
+.foot { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(245,242,248,.94); backdrop-filter: blur(6px); border-top: 1px solid var(--line); padding: 8px 24px; font-size: 12px; color: var(--ink-3); display: flex; gap: 14px; flex-wrap: wrap; }
+.foot .ok { color: var(--good); font-weight: 700; }
+.foot .bad { color: var(--bad); font-weight: 700; }
+
+@media (max-width: 760px) {
+  .top { padding: 12px 16px; }
+  .count { margin-left: 0; width: 100%; }
+  .bar { width: 120px; }
+  .wrap { padding: 14px 14px 120px; }
+  .search input { font-size: 18px; padding: 15px 90px 15px 48px; }
+  .row { grid-template-columns: minmax(0, 1fr); }
+  .brand img { height: 32px; }
+  .hint { display: none; }
+  .act { align-items: stretch; }
+  .mark { width: 100%; }
+  .when { text-align: left; }
+  .meta { margin-left: 0; width: 100%; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <img src="__BGS_LOGO__" alt="Boardroom Governance Summit">
+    <div>
+      <div class="t1">Entry check-in</div>
+      <div class="t2" id="eventLine"></div>
+    </div>
+  </div>
+  <div class="count" aria-live="polite">
+    <div>
+      <div class="big" id="countIn">0</div>
+      <div class="of" id="countOf">entered</div>
+      <div class="bar" aria-hidden="true"><i id="countBar"></i></div>
+    </div>
+    <button class="tools" id="openTools" type="button">Tools</button>
+  </div>
+</header>
+<div class="banner bad" id="saveBanner" role="alert">This browser is not saving ticks, so they will be lost when the window closes. Open this file in Google Chrome or Microsoft Edge (not a private window).</div>
+
+<main class="wrap">
+  <div class="search">
+    <label for="q" class="sr-only">Search by name, email, phone or ticket code</label>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+    <input id="q" type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type a name, email, phone number or ticket code" autofocus>
+    <button class="clear" id="clear" type="button">Clear</button>
+  </div>
+  <p class="hint"><kbd>Enter</kbd> marks the highlighted person as entered · <kbd>↑</kbd> <kbd>↓</kbd> move the highlight · <kbd>Esc</kbd> clears the search</p>
+
+  <div class="filters">
+    <div class="seg" role="group" aria-label="Show">
+      <button type="button" data-show="all" aria-pressed="true">Everyone</button>
+      <button type="button" data-show="out" aria-pressed="false">Not yet entered</button>
+      <button type="button" data-show="in" aria-pressed="false">Entered</button>
+    </div>
+    <div role="group" aria-label="Ticket type" id="kinds"></div>
+    <div class="meta" id="meta"></div>
+  </div>
+
+  <div id="alert"></div>
+  <div class="list" id="list" aria-live="polite"></div>
+</main>
+
+<div class="toasts" id="toasts" aria-live="assertive"></div>
+
+<footer class="foot">
+  <span>Works offline</span>
+  <span id="asAt"></span>
+  <span id="saved"></span>
+  <span id="deskLabel"></span>
+  <span>Confidential: guests' personal details. Do not share; delete after the event.</span>
+</footer>
+
+<dialog id="tools" aria-labelledby="toolsTitle">
+  <div class="dlg-h"><b id="toolsTitle">Tools</b><button class="x" type="button" id="closeTools" aria-label="Close">×</button></div>
+  <div class="dlg-b">
+    <div class="tool desk">
+      <div><div class="t"><label for="deskName">This desk</label></div><p>Shown next to each tick, so you can tell which entrance let someone in.</p></div>
+      <input id="deskName" maxlength="30" placeholder="e.g. Main entrance">
+    </div>
+    <div class="tool">
+      <div><div class="t">Download the entry list</div><p>Everyone, with entered or not and the time, as a spreadsheet (CSV, opens in Excel).</p></div>
+      <button class="btn" type="button" id="exportCsv">Download list</button>
+    </div>
+    <div class="tool">
+      <div><div class="t">Save ticks to a file</div><p>For a backup, or to bring this computer's ticks to another one.</p></div>
+      <button class="btn" type="button" id="exportTicks">Save ticks</button>
+    </div>
+    <div class="tool">
+      <div><div class="t">Add ticks from another computer</div><p>Choose a ticks file saved on another desk. Both are combined; the latest change to each ticket wins.</p></div>
+      <button class="btn" type="button" id="importTicks">Choose file</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+    <div class="tool">
+      <div><div class="t">Clear all ticks on this computer</div><p>Starts again from the list as it was downloaded. Cannot be undone, so save ticks first.</p></div>
+      <button class="btn danger" type="button" id="resetTicks">Clear ticks</button>
+    </div>
+  </div>
+</dialog>
+
+<script id="bgs-data" type="application/json">__BGS_DATA__</script>
+<script>
+(function () {
+  "use strict";
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+  var DATA;
+  try { DATA = JSON.parse(document.getElementById("bgs-data").textContent); } catch (e) { DATA = null; }
+  if (!DATA || !Array.isArray(DATA.tickets)) {
+    document.getElementById("list").innerHTML = '<div class="empty"><b>No ticket list in this file</b>Download the check-in app again from the BGS Dashboard (Payments → Registrants).</div>';
+    return;
+  }
+
+  var STORE = "bgs2026-checkin-v1";
+  var DESK = "bgs2026-checkin-desk";
+  var KIND = {
+    paid: { label: "Paid", cls: "k-paid" },
+    delegate: { label: "Delegate", cls: "k-delegate" },
+    complimentary: { label: "Complimentary", cls: "k-complimentary" },
+    student: { label: "Student", cls: "k-student" }
+  };
+  var LIMIT = 120;
+
+  function fold(s) { return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
+  function alnum(s) { return fold(s).replace(/[^a-z0-9]/g, ""); }
+  function digits(s) { return String(s || "").replace(/\D/g, ""); }
+  /** 0241234567, +233 24 123 4567 and 233241234567 all become 241234567. */
+  function phoneKey(s) { var d = digits(s); if (d.indexOf("233") === 0 && d.length > 9) d = d.slice(3); if (d.charAt(0) === "0") d = d.slice(1); return d; }
+  var HONORIFIC = /^(mr|mrs|ms|miss|mx|dr|prof|professor|hon|honourable|rev|revd|reverend|sir|dame|lady|madam|nana|togbe|chief|eng|ing|ps|pastor|bishop|apostle|alhaji|hajia)\b\.?\s*/i;
+  function sortName(n) { var k = String(n || "").trim(); for (var i = 0; i < 3 && HONORIFIC.test(k); i++) k = k.replace(HONORIFIC, ""); return fold(k); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+  var tickets = DATA.tickets.map(function (t, i) {
+    var name = String(t.n || "").trim();
+    return {
+      i: i, code: String(t.c), kind: t.k, name: name, org: t.o || "", role: t.r || "", email: t.e || "", phone: t.p || "",
+      buyer: t.b || "", buyerEmail: t.be || "", buyerPhone: t.bp || "", programme: t.pr || "", studentNo: t.sn || "",
+      dashboardIn: t.ci || null, zoom: !!t.z,
+      codeKey: alnum(t.c), nameKey: fold(name), sortKey: name ? sortName(name) : "\uffff" + alnum(t.c),
+      hay: fold([name, t.o, t.r, t.e, t.b, t.be, t.pr, t.sn, t.c].join(" ")),
+      hayAl: alnum([name, t.o, t.e, t.b, t.be, t.sn, t.c].join(" ")),
+      phones: [phoneKey(t.p), phoneKey(t.bp)].filter(function (p) { return p.length >= 4; })
+    };
+  });
+  tickets.sort(function (a, b) { return a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : a.code < b.code ? -1 : 1; });
+  tickets.forEach(function (t, i) { t.order = i; });
+  var byCode = {};
+  tickets.forEach(function (t) { byCode[t.code] = t; });
+  var valid = tickets.filter(function (t) { return !t.zoom; });
+
+  // ── Ticks ─────────────────────────────────────────────────────────────────
+  // { "BGS-K7QM-4XWP": { in: true, at: "2026-11-12T08:41:00.000Z", desk: "Main entrance" } }
+  // An unmark is kept as { in: false, at } so combining two computers' ticks keeps the latest change.
+  var marks = {};
+  var saveOk = true;
+  var lastSaved = null;
+
+  function loadMarks() {
+    try {
+      var raw = window.localStorage.getItem(STORE);
+      var parsed = raw ? JSON.parse(raw) : {};
+      marks = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    } catch (e) { marks = {}; }
+  }
+  function saveMarks() {
+    try {
+      window.localStorage.setItem(STORE, JSON.stringify(marks));
+      saveOk = window.localStorage.getItem(STORE) !== null;
+    } catch (e) { saveOk = false; }
+    if (saveOk) lastSaved = new Date();
+    renderSaved();
+  }
+  function deskName() { try { return window.localStorage.getItem(DESK) || ""; } catch (e) { return ""; } }
+
+  /** Entered or not, with when and where. A tick on this computer overrides what the dashboard knew. */
+  function state(t) {
+    var m = marks[t.code];
+    if (m && typeof m.in === "boolean") return m.in ? { in: true, at: m.at, desk: m.desk || "" } : { in: false };
+    if (t.dashboardIn) return { in: true, at: t.dashboardIn, desk: "dashboard" };
+    return { in: false };
+  }
+  function setIn(t, value) {
+    var prev = marks[t.code] ? JSON.parse(JSON.stringify(marks[t.code])) : undefined;
+    marks[t.code] = { in: value, at: new Date().toISOString(), desk: deskName() };
+    saveMarks();
+    return prev;
+  }
+  function restore(t, prev) {
+    if (prev === undefined) delete marks[t.code]; else marks[t.code] = prev;
+    saveMarks();
+  }
+
+  // ── Formatting ────────────────────────────────────────────────────────────
+  function time(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return "";
+    var hm = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Accra" });
+    var day = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Africa/Accra" });
+    var today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Africa/Accra" });
+    return day === today ? hm : day + ", " + hm;
+  }
+  function fullTime(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return "";
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Accra" }) + " " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Accra" });
+  }
+  function where(s) { return s.desk === "dashboard" ? " · checked in on the dashboard" : s.desk ? " · " + s.desk : ""; }
+
+  // ── Search ────────────────────────────────────────────────────────────────
+  var show = "all";
+  var kindFilter = {};
+  var pendingOut = null;
+  var pendingTimer = 0;
+  var query = "";
+  var results = [];
+  var selected = 0;
+
+  function matches(q) {
+    var raw = q.trim();
+    if (!raw) return null;
+    var qAl = alnum(raw);
+    var phoneLike = /^[+\d\s().\-\/]+$/.test(raw) && digits(raw).length >= 4;
+    var tokens = fold(raw).split(/\s+/).filter(Boolean);
+    var out = [];
+    for (var i = 0; i < tickets.length; i++) {
+      var t = tickets[i];
+      var score = 0;
+      if (qAl.length >= 4 && t.codeKey === qAl) score = 1000;
+      else if (qAl.length >= 3 && t.codeKey.indexOf(qAl) !== -1) score = 400;
+      if (phoneLike) {
+        var pk = phoneKey(raw);
+        for (var p = 0; p < t.phones.length; p++) if (t.phones[p].indexOf(pk) !== -1) { score = Math.max(score, t.phones[p] === pk ? 900 : 300); }
+      }
+      if (!score) {
+        var s = 0, ok = true;
+        for (var k = 0; k < tokens.length; k++) {
+          var tok = tokens[k];
+          if (t.hay.indexOf(tok) !== -1) {
+            s += t.nameKey.indexOf(tok) === 0 ? 40 : t.nameKey.indexOf(" " + tok) !== -1 ? 30 : t.nameKey.indexOf(tok) !== -1 ? 15 : 3;
+          } else {
+            var tal = tok.replace(/[^a-z0-9]/g, "");
+            if (tal.length >= 2 && t.hayAl.indexOf(tal) !== -1) s += 2; else { ok = false; break; }
+          }
+        }
+        if (ok) score = s;
+      }
+      if (score) out.push({ t: t, score: score });
+    }
+    out.sort(function (a, b) { return b.score - a.score || a.t.order - b.t.order; });
+    return out.map(function (r) { return r.t; });
+  }
+
+  function filtered(list) {
+    var anyKind = Object.keys(kindFilter).some(function (k) { return kindFilter[k]; });
+    return list.filter(function (t) {
+      if (anyKind && !kindFilter[t.kind]) return false;
+      if (show === "all") return true;
+      var s = state(t);
+      return show === "in" ? s.in : !s.in && !t.zoom;
+    });
+  }
+
+  // ── Rendering ─────────────────────────────────────────────────────────────
+  var listEl = document.getElementById("list");
+  var alertEl = document.getElementById("alert");
+  var metaEl = document.getElementById("meta");
+  var qEl = document.getElementById("q");
+  var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  function rowHtml(t, isSel) {
+    var s = state(t);
+    var kind = KIND[t.kind] || { label: t.kind, cls: "k-paid" };
+    var parts = [];
+    if (t.org) parts.push(esc(t.org));
+    if (t.role) parts.push(esc(t.role));
+    var contact = [];
+    if (t.email) contact.push(esc(t.email));
+    if (t.phone) contact.push(esc(t.phone));
+    var extra = [];
+    if (t.kind === "student" && (t.programme || t.studentNo)) extra.push("Student" + (t.programme ? " · " + esc(t.programme) : "") + (t.studentNo ? " · student no. " + esc(t.studentNo) : ""));
+    if (t.buyer && fold(t.buyer) !== t.nameKey) extra.push("Bought by " + esc(t.buyer) + (t.buyerEmail ? " · " + esc(t.buyerEmail) : "") + (t.buyerPhone ? " · " + esc(t.buyerPhone) : ""));
+    else if (!t.email && !t.phone && (t.buyerEmail || t.buyerPhone)) contact.push(esc(t.buyerEmail || ""), esc(t.buyerPhone || ""));
+
+    var action;
+    if (t.zoom) action = '<div class="stop">Not valid for entry: registered for Zoom (online) only</div>';
+    else if (s.in) action = '<span class="entered">' + CHECK + 'Entered</span><div class="when">' + esc(time(s.at)) + esc(where(s)) + '</div>' +
+      (pendingOut === t.code
+        ? '<button class="unmark confirm" type="button" data-act="out" data-code="' + esc(t.code) + '">Click again to unmark</button>'
+        : '<button class="unmark" type="button" data-act="out" data-code="' + esc(t.code) + '">Unmark</button>');
+    else action = '<button class="mark" type="button" data-act="in" data-code="' + esc(t.code) + '">Mark entered</button>';
+
+    return '<article class="row' + (s.in ? " in" : "") + (t.zoom ? " zoom" : "") + (isSel ? " sel" : "") + '" data-code="' + esc(t.code) + '">' +
+      '<div class="who">' +
+        '<div class="' + (t.name ? "name" : "name none") + '">' + (t.name ? esc(t.name) : "No name recorded") + '</div>' +
+        '<div class="line"><span class="badge ' + kind.cls + '">' + esc(kind.label) + '</span>' + parts.join('<span class="sep">·</span>') + '</div>' +
+        '<div class="small"><span class="code">' + esc(t.code) + '</span><button class="copy" type="button" data-act="copy" data-code="' + esc(t.code) + '">Copy</button>' +
+          (contact.filter(Boolean).length ? '<span class="sep">·</span>' + contact.filter(Boolean).join('<span class="sep">·</span>') : "") + '</div>' +
+        (extra.length ? '<div class="small">' + extra.join("<br>") + '</div>' : "") +
+      '</div>' +
+      '<div class="act">' + action + '</div>' +
+    '</article>';
+  }
+
+  function render() {
+    var found = matches(query);
+    var base = found || (show === "in"
+      ? tickets.slice().sort(function (a, b) { var x = state(a).at || "", y = state(b).at || ""; return x < y ? 1 : x > y ? -1 : a.order - b.order; })
+      : tickets);
+    results = filtered(base);
+    if (selected >= results.length) selected = Math.max(0, results.length - 1);
+
+    // A single exact hit that is already in, or not valid, gets a loud warning above the list.
+    var top = found && found.length && results.length ? results[0] : null;
+    var exact = top && (results.length === 1 || alnum(query) === top.codeKey);
+    if (exact && top.zoom) alertEl.innerHTML = '<div class="alert zoom">' + esc(top.name || top.code) + ' is registered for Zoom (online) only. This ticket does not admit anyone in person.</div>';
+    else if (exact && state(top).in) alertEl.innerHTML = '<div class="alert in">Already entered at ' + esc(time(state(top).at)) + esc(where(state(top))) + '. Check before letting this ticket in again.</div>';
+    else alertEl.innerHTML = "";
+
+    if (!results.length) {
+      listEl.innerHTML = found
+        ? '<div class="empty"><b>No ticket matches “' + esc(query.trim()) + '”</b>Check the spelling, try part of the name, the email, the phone number or the ticket code. If it is still not found, the person is not on the ticket list.</div>'
+        : '<div class="empty"><b>Nobody here yet</b>' + (show === "in" ? "Ticks you mark appear here, newest first." : "Everyone on this filter has entered.") + '</div>';
+    } else {
+      var html = "";
+      var n = Math.min(results.length, LIMIT);
+      for (var i = 0; i < n; i++) html += rowHtml(results[i], i === selected);
+      if (results.length > LIMIT) html += '<div class="more">Showing the first ' + LIMIT + ' of ' + results.length.toLocaleString("en-GB") + '. Type a name, email, phone or code to find someone.</div>';
+      listEl.innerHTML = html;
+    }
+    metaEl.textContent = found ? results.length.toLocaleString("en-GB") + (results.length === 1 ? " match" : " matches") : results.length.toLocaleString("en-GB") + " on this list";
+    document.getElementById("clear").classList.toggle("show", !!query);
+    renderCount();
+  }
+
+  function renderCount() {
+    var inCount = 0;
+    for (var i = 0; i < valid.length; i++) if (state(valid[i]).in) inCount++;
+    document.getElementById("countIn").textContent = inCount.toLocaleString("en-GB");
+    document.getElementById("countOf").textContent = "entered of " + valid.length.toLocaleString("en-GB") + " valid tickets";
+    document.getElementById("countBar").style.width = (valid.length ? Math.round((inCount / valid.length) * 100) : 0) + "%";
+  }
+  function renderSaved() {
+    var el = document.getElementById("saved");
+    document.getElementById("saveBanner").classList.toggle("show", !saveOk);
+    el.className = saveOk ? "ok" : "bad";
+    el.textContent = saveOk ? (lastSaved ? "Ticks saved on this computer at " + lastSaved.toLocaleTimeString("en-GB") : "Ticks are saved on this computer") : "Ticks are NOT being saved";
+    var desk = deskName();
+    document.getElementById("deskLabel").textContent = desk ? "Desk: " + desk : "";
+  }
+
+  function scrollToSelected() {
+    var el = listEl.querySelectorAll(".row")[selected];
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: "nearest" });
+  }
+
+  // ── Toasts ────────────────────────────────────────────────────────────────
+  var toastsEl = document.getElementById("toasts");
+  function toast(text, opts) {
+    opts = opts || {};
+    var el = document.createElement("div");
+    el.className = "toast" + (opts.tone ? " " + opts.tone : "");
+    el.innerHTML = "<span></span>";
+    el.firstChild.textContent = text;
+    if (opts.undo) {
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = "Undo";
+      b.addEventListener("click", function () { opts.undo(); el.remove(); qEl.focus(); });
+      el.appendChild(b);
+    }
+    toastsEl.appendChild(el);
+    while (toastsEl.children.length > 3) toastsEl.firstChild.remove();
+    setTimeout(function () { el.remove(); }, opts.undo ? 7000 : 3500);
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  function markIn(t) {
+    if (!t || t.zoom) return;
+    var s = state(t);
+    if (s.in) { toast((t.name || t.code) + " already entered at " + time(s.at), { tone: "warn" }); return; }
+    var prev = setIn(t, true);
+    render();
+    toast((t.name || t.code) + " marked entered", { tone: "ok", undo: function () { restore(t, prev); render(); } });
+    qEl.focus();
+    qEl.select();
+  }
+  function markOut(t) {
+    // Unmarking takes a second click, so a slip of the mouse cannot undo someone's entry.
+    if (pendingOut !== t.code) {
+      pendingOut = t.code;
+      if (pendingTimer) clearTimeout(pendingTimer);
+      pendingTimer = setTimeout(function () { pendingOut = null; pendingTimer = 0; render(); }, 4000);
+      render();
+      return;
+    }
+    if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = 0; }
+    pendingOut = null;
+    var prev = setIn(t, false);
+    render();
+    toast((t.name || t.code) + " is no longer marked entered", { undo: function () { restore(t, prev); render(); } });
+  }
+  function copy(code) {
+    var done = function () { toast("Ticket code " + code + " copied"); };
+    var fallback = function () {
+      var ta = document.createElement("textarea");
+      ta.value = code; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { toast("Copying is blocked here. The code is " + code); }
+      ta.remove();
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, fallback); else fallback();
+  }
+
+  listEl.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-act]");
+    if (!b) return;
+    var t = byCode[b.getAttribute("data-code")];
+    if (!t) return;
+    var act = b.getAttribute("data-act");
+    if (act === "in") markIn(t);
+    else if (act === "out") markOut(t);
+    else if (act === "copy") copy(t.code);
+  });
+
+  var pending = 0;
+  qEl.addEventListener("input", function () {
+    query = qEl.value;
+    selected = 0;
+    if (pending) cancelAnimationFrame(pending);
+    pending = requestAnimationFrame(function () { pending = 0; render(); window.scrollTo(0, 0); });
+  });
+  qEl.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowDown") { e.preventDefault(); if (selected < Math.min(results.length, LIMIT) - 1) { selected++; render(); scrollToSelected(); } }
+    else if (e.key === "ArrowUp") { e.preventDefault(); if (selected > 0) { selected--; render(); scrollToSelected(); } }
+    else if (e.key === "Enter") { e.preventDefault(); if (query.trim() && results[selected]) markIn(results[selected]); }
+    else if (e.key === "Escape") { qEl.value = ""; query = ""; selected = 0; render(); }
+  });
+  document.getElementById("clear").addEventListener("click", function () { qEl.value = ""; query = ""; selected = 0; render(); qEl.focus(); });
+  document.addEventListener("keydown", function (e) {
+    // Typing anywhere goes to the search box.
+    if (document.activeElement === qEl || e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
+    if (document.getElementById("tools").open) return;
+    qEl.focus();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-show]"), function (b) {
+    b.addEventListener("click", function () {
+      show = b.getAttribute("data-show");
+      Array.prototype.forEach.call(document.querySelectorAll("[data-show]"), function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      selected = 0; render(); qEl.focus();
+    });
+  });
+  var kindsEl = document.getElementById("kinds");
+  Object.keys(KIND).forEach(function (k) {
+    var count = tickets.filter(function (t) { return t.kind === k; }).length;
+    if (!count) return;
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed", "false");
+    b.textContent = KIND[k].label + " (" + count.toLocaleString("en-GB") + ")";
+    b.style.marginRight = "6px";
+    b.addEventListener("click", function () { kindFilter[k] = !kindFilter[k]; b.setAttribute("aria-pressed", String(!!kindFilter[k])); selected = 0; render(); qEl.focus(); });
+    kindsEl.appendChild(b);
+  });
+
+  // Another tab or window on this computer changed the ticks.
+  window.addEventListener("storage", function (e) { if (e.key === STORE || e.key === null) { loadMarks(); render(); } });
+
+  // ── Tools ─────────────────────────────────────────────────────────────────
+  var tools = document.getElementById("tools");
+  document.getElementById("openTools").addEventListener("click", function () {
+    document.getElementById("deskName").value = deskName();
+    if (tools.showModal) tools.showModal(); else tools.setAttribute("open", "");
+  });
+  function closeTools() { if (tools.close) tools.close(); else tools.removeAttribute("open"); qEl.focus(); }
+  document.getElementById("closeTools").addEventListener("click", closeTools);
+  tools.addEventListener("close", function () { qEl.focus(); });
+  document.getElementById("deskName").addEventListener("input", function (e) {
+    try { window.localStorage.setItem(DESK, e.target.value.trim()); } catch (err) { /* shown by the save banner */ }
+    renderSaved();
+  });
+
+  function stamp() { var d = new Date(); var p = function (n) { return (n < 10 ? "0" : "") + n; }; return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()); }
+  function download(name, text, type) {
+    var blob = new Blob([text], { type: type });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+  }
+  function csvCell(v) {
+    var s = String(v == null ? "" : v);
+    if (/^[=@]/.test(s) || /^[+\-][^\d\s]/.test(s)) s = "'" + s;
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  document.getElementById("exportCsv").addEventListener("click", function () {
+    var rows = [["Ticket code", "Name", "Ticket type", "Organisation", "Role", "Email", "Phone", "Bought by", "Entered", "Entered at (Accra)", "Desk"]];
+    tickets.forEach(function (t) {
+      var s = state(t);
+      rows.push([t.code, t.name, t.zoom ? "Zoom only (not valid in person)" : (KIND[t.kind] || { label: t.kind }).label, t.org, t.role, t.email || t.buyerEmail, t.phone || t.buyerPhone,
+        t.buyer && fold(t.buyer) !== t.nameKey ? t.buyer : "", s.in ? "Yes" : "No", s.in ? fullTime(s.at) : "", s.in ? (s.desk === "dashboard" ? "Dashboard" : s.desk) : ""]);
+    });
+    download("BGS-2026-entry-list-" + stamp() + ".csv", "\ufeff" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n"), "text/csv;charset=utf-8");
+    toast("Entry list downloaded");
+  });
+  document.getElementById("exportTicks").addEventListener("click", function () {
+    var desk = deskName();
+    download("BGS-2026-ticks-" + (desk ? desk.replace(/[^\w-]+/g, "-") + "-" : "") + stamp() + ".json", JSON.stringify({ kind: "bgs-checkin-ticks", event: DATA.event && DATA.event.name, desk: desk, savedAt: new Date().toISOString(), marks: marks }, null, 1), "application/json");
+    toast("Ticks saved to a file");
+  });
+  var fileEl = document.getElementById("importFile");
+  document.getElementById("importTicks").addEventListener("click", function () { fileEl.value = ""; fileEl.click(); });
+  fileEl.addEventListener("change", function () {
+    var file = fileEl.files && fileEl.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data;
+      try { data = JSON.parse(String(reader.result)); } catch (e) { toast("That file is not a ticks file.", { tone: "warn" }); return; }
+      if (!data || data.kind !== "bgs-checkin-ticks" || typeof data.marks !== "object") { toast("That file is not a ticks file.", { tone: "warn" }); return; }
+      var changed = 0, unknown = 0;
+      Object.keys(data.marks).forEach(function (code) {
+        var m = data.marks[code];
+        if (!m || typeof m.in !== "boolean" || !m.at) return;
+        if (!byCode[code]) { unknown++; return; }
+        var mine = marks[code];
+        if (!mine || String(m.at) > String(mine.at)) { marks[code] = { in: m.in, at: String(m.at), desk: String(m.desk || "") }; changed++; }
+      });
+      saveMarks(); render(); closeTools();
+      toast(changed ? changed + (changed === 1 ? " ticket updated" : " tickets updated") + " from " + (data.desk || "the other computer") + (unknown ? " (" + unknown + " not on this list)" : "") : "Nothing new in that file", { tone: changed ? "ok" : undefined });
+    };
+    reader.onerror = function () { toast("That file could not be read.", { tone: "warn" }); };
+    reader.readAsText(file);
+  });
+  document.getElementById("resetTicks").addEventListener("click", function () {
+    var answer = window.prompt("This removes every tick made on this computer. Type CLEAR to confirm.");
+    if (answer === null) return;
+    if (answer.trim().toUpperCase() !== "CLEAR") { toast("Nothing cleared.", { tone: "warn" }); return; }
+    marks = {}; saveMarks(); render(); closeTools();
+    toast("All ticks on this computer were cleared");
+  });
+
+  // ── Start ─────────────────────────────────────────────────────────────────
+  document.getElementById("eventLine").textContent = [DATA.event && DATA.event.name, DATA.event && DATA.event.line].filter(Boolean).join(" · ");
+  document.getElementById("asAt").textContent = "Ticket list as at " + (DATA.generatedAt || "unknown") + " · " + tickets.length.toLocaleString("en-GB") + " tickets";
+  loadMarks();
+  // Prove that ticks really persist here before anyone relies on them.
+  try { window.localStorage.setItem(STORE + "-probe", "1"); saveOk = window.localStorage.getItem(STORE + "-probe") === "1"; window.localStorage.removeItem(STORE + "-probe"); } catch (e) { saveOk = false; }
+  renderSaved();
+  render();
+  qEl.focus();
+})();
+</script>
+</body>
+</html>

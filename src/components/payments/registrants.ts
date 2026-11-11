@@ -32,13 +32,25 @@ export type RegistrantGroup = {
   /** Replaces the usual "6 registrants · GHS 600 collected". */
   summary?: string;
 };
-export type RegistrantsReport = { title: string; generatedAt: string; groups: RegistrantGroup[]; truncated: boolean };
+export type RegistrantsReport = { title: string; generatedAt: string; groups: RegistrantGroup[]; truncated: boolean; kit: CheckinKit };
+
+/**
+ * What the offline check-in app (public/checkin/template.html) carries: every valid in-person ticket with the
+ * details that tie it to a person. Short keys keep the file small. `z` marks a ticket issued for a Zoom payment.
+ */
+export type CheckinTicket = {
+  c: string; k: string; n: string; o: string; r: string; e: string; p: string;
+  b: string; be: string; bp: string; pr: string; sn: string; ci: string | null; z?: 1;
+};
+export type CheckinKit = { event: { name: string; line: string }; generatedAt: string; tickets: CheckinTicket[] };
 
 /** One valid in-person ticket, as read from the ticket ledger. */
 export type Admission = {
   code: string; kind: string; checkedIn: boolean; name: string | null; organisation: string | null; role: string | null;
   /** Who paid, when someone else bought the ticket. */ buyer: string | null;
   /** The Paystack payment behind a paid ticket. */ paystackId: number | null;
+  email: string | null; phone: string | null; buyerEmail: string | null; buyerPhone: string | null;
+  programme: string | null; studentNumber: string | null; checkedInAt: string | null;
 };
 
 const KIND_LABEL: Record<string, string> = { paid: "Paid", delegate: "Delegate", complimentary: "Complimentary", student: "Student" };
@@ -80,6 +92,7 @@ const NO = { key: "no", header: "No.", width: 0.4, numeric: true };
 export function buildRegistrants(input: {
   registrations: PaystackRegistration[]; pages: PaystackPage[]; truncated: boolean; admissions: Admission[];
   seat: { price: number | null; currency: string }; eventName: string; eventLine: string; generatedAt: string;
+  /** Under the app's title: "12 Nov 2026 · Labadi Beach Hotel, Accra". */ checkinLine: string;
 }): RegistrantsReport {
   const pages = new Map(input.pages.map((p) => [slugOf(p.url) ?? "", p]));
   const seat = input.seat.price;
@@ -170,7 +183,17 @@ export function buildRegistrants(input: {
       count: buckets.other.length, collected: total(buckets.other),
     });
   }
-  return { title: `${input.eventName} — Registrants`, generatedAt: input.generatedAt, groups, truncated: input.truncated };
+  const kit: CheckinKit = {
+    event: { name: input.eventName, line: input.checkinLine },
+    generatedAt: input.generatedAt,
+    tickets: input.admissions.map((a) => ({
+      c: a.code, k: a.kind, n: a.name?.trim() ?? "", o: a.organisation ?? "", r: a.role?.trim() ?? "", e: a.email?.trim().toLowerCase() ?? "", p: a.phone?.trim() ?? "",
+      b: a.buyer?.trim() ?? "", be: a.buyerEmail?.trim().toLowerCase() ?? "", bp: a.buyerPhone?.trim() ?? "", pr: a.programme?.trim() ?? "", sn: a.studentNumber?.trim() ?? "",
+      ci: a.checkedIn ? a.checkedInAt ?? new Date().toISOString() : null,
+      ...(a.paystackId !== null && zoomPayments.has(a.paystackId) ? { z: 1 as const } : {}),
+    })),
+  };
+  return { title: `${input.eventName} — Registrants`, generatedAt: input.generatedAt, groups, truncated: input.truncated, kit };
 }
 
 /** "6 registrants · GHS 600 collected", or the list's own summary ("512 people · 120 paid · 300 complimentary"). */
