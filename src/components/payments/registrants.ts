@@ -2,15 +2,21 @@ import type { PaystackPage, PaystackRegistration } from "@/lib/paystack";
 import { formatDate, formatNumber, formatTime } from "@/lib/utils";
 
 /**
- * Everyone who has paid on Paystack, split by what they paid for:
- * the Zoom pages (students and regular) and the in-person ticket.
+ * Everyone coming to the summit, list by list: every valid in-person ticket
+ * (paid, delegate, complimentary, student — the list security checks names
+ * against at the door) and everyone who registered on the Zoom pages.
  * Pure: built on the server, drawn on screen, in the PDF and in the Excel file.
  */
 
-export type RegistrantColumn = { key: string; header: string; /** Share of the PDF table width. */ width: number; numeric?: boolean; /** Excel only: too wide for the PDF page. */ excelOnly?: boolean };
+export type RegistrantColumn = {
+  key: string; header: string; /** Share of the PDF table width. */ width: number; numeric?: boolean;
+  /** Excel only: too wide for the PDF page. */ excelOnly?: boolean;
+  /** PDF only: printed for writing on by hand, not shown on screen or in Excel. */ printOnly?: boolean;
+  /** Draw an empty box to tick at the door. */ tickBox?: boolean;
+};
 export type RegistrantRow = Record<string, string | number>;
 export type RegistrantGroup = {
-  key: "zoom-student" | "zoom-regular" | "in-person" | "other";
+  key: "in-person" | "in-person-unnamed" | "zoom-student" | "zoom-regular" | "other";
   /** "Zoom (online) — Students · GHS 100" */
   title: string;
   /** Excel sheet name, at most 31 characters. */
@@ -20,10 +26,30 @@ export type RegistrantGroup = {
   columns: RegistrantColumn[];
   rows: RegistrantRow[];
   count: number;
-  collected: number;
+  /** Money taken, for the Paystack lists; null for ticket lists. */
+  collected: number | null;
   currency: string;
+  /** Replaces the usual "6 registrants · GHS 600 collected". */
+  summary?: string;
 };
 export type RegistrantsReport = { title: string; generatedAt: string; groups: RegistrantGroup[]; truncated: boolean };
+
+/** One valid in-person ticket, as read from the ticket ledger. */
+export type Admission = {
+  code: string; kind: string; checkedIn: boolean; name: string | null; organisation: string | null; role: string | null;
+  /** Who paid, when someone else bought the ticket. */ buyer: string | null;
+  /** The Paystack payment behind a paid ticket. */ paystackId: number | null;
+};
+
+const KIND_LABEL: Record<string, string> = { paid: "Paid", delegate: "Delegate", complimentary: "Complimentary", student: "Student" };
+const KIND_PLURAL: Record<string, string> = { paid: "paid", delegate: "delegates", complimentary: "complimentary", student: "students" };
+const HONORIFIC = /^(mr|mrs|ms|miss|mx|dr|prof|professor|hon|honourable|rev|revd|reverend|very rev|rt rev|sir|dame|lady|madam|nana|togbe|chief|eng|ing|ps|pastor|bishop|apostle|alhaji|hajia)\b\.?\s*/i;
+/** Sort key for a name: titles (Mr, Dr, Prof., Nana…) are skipped so "Prof. Ama Boateng" files under A. */
+function sortName(name: string): string {
+  let key = name.trim();
+  for (let i = 0; i < 3 && HONORIFIC.test(key); i++) key = key.replace(HONORIFIC, "");
+  return key.toLowerCase();
+}
 
 /** "GHS 2,500" — spelt out, because the cedi sign is missing from the PDF's built-in font. */
 export const money = (amount: number, currency = "GHS") => `${currency} ${formatNumber(amount)}`;
@@ -52,12 +78,12 @@ const REF = { key: "reference", header: "Paystack reference", width: 1.35 };
 const NO = { key: "no", header: "No.", width: 0.4, numeric: true };
 
 export function buildRegistrants(input: {
-  registrations: PaystackRegistration[]; pages: PaystackPage[]; truncated: boolean;
+  registrations: PaystackRegistration[]; pages: PaystackPage[]; truncated: boolean; admissions: Admission[];
   seat: { price: number | null; currency: string }; eventName: string; eventLine: string; generatedAt: string;
 }): RegistrantsReport {
   const pages = new Map(input.pages.map((p) => [slugOf(p.url) ?? "", p]));
   const seat = input.seat.price;
-  const buckets: Record<RegistrantGroup["key"], PaystackRegistration[]> = { "zoom-student": [], "zoom-regular": [], "in-person": [], other: [] };
+  const buckets: Record<RegistrantGroup["key"], PaystackRegistration[]> = { "in-person": [], "in-person-unnamed": [], "zoom-student": [], "zoom-regular": [], other: [] };
   for (const r of [...input.registrations].sort((a, b) => Date.parse(a.paidAt ?? "") - Date.parse(b.paidAt ?? ""))) buckets[classify(r, pages, seat)].push(r);
 
   const pagePrice = (student: boolean) => input.pages.find((p) => /student/i.test(p.name) === student)?.amount ?? null;
@@ -82,6 +108,41 @@ export function buildRegistrants(input: {
   const currency = input.registrations[0]?.currency ?? input.seat.currency;
 
   const groups: RegistrantGroup[] = [];
+
+  // In person: every valid ticket in the ledger. Tickets the Paystack import issued for Zoom payments are not
+  // in-person tickets, so they are left out — the Zoom registrants are on their own lists below.
+  const zoomPayments = new Set([...buckets["zoom-student"], ...buckets["zoom-regular"]].map((r) => r.id));
+  const admitted = input.admissions.filter((a) => a.paystackId === null || !zoomPayments.has(a.paystackId));
+  const leftOut = input.admissions.length - admitted.length;
+  const named = admitted.filter((a) => a.name?.trim()).sort((a, b) => sortName(a.name!).localeCompare(sortName(b.name!), "en", { sensitivity: "base" }) || a.code.localeCompare(b.code));
+  const unnamed = admitted.filter((a) => !a.name?.trim()).sort((a, b) => a.code.localeCompare(b.code));
+  const kinds = (list: Admission[]) => ["paid", "delegate", "complimentary", "student"].map((k) => [k, list.filter((a) => a.kind === k).length] as const).filter(([, n]) => n).map(([k, n]) => `${formatNumber(n)} ${KIND_PLURAL[k]}`).join(" · ");
+  const ticketLabel = (a: Admission) => [KIND_LABEL[a.kind] ?? a.kind, a.role?.trim()].filter(Boolean).join(" · ");
+  const checked = admitted.filter((a) => a.checkedIn).length;
+  const TICK: RegistrantColumn = { key: "tick", header: "Tick", width: 0.5, tickBox: true, printOnly: true };
+  groups.push({
+    key: "in-person", sheet: "In person - Names A-Z", currency, collected: null, count: named.length,
+    title: "In person — Ticket holders by name (A–Z)",
+    summary: `${formatNumber(named.length)} ${named.length === 1 ? "person" : "people"}${named.length ? ` · ${kinds(named)}` : ""}`,
+    note: `Everyone holding a valid ticket for ${input.eventLine}: paid (online, by transfer or by an institution), delegates, complimentary guests and students. Sorted by first name, ignoring titles such as Mr, Dr or Prof. Check the name against the person's ID and the ticket code on their e-ticket, then tick the box.${unnamed.length ? ` ${formatNumber(unnamed.length)} more tickets carry no name and are listed by code after this list.` : ""}${leftOut ? ` ${formatNumber(leftOut)} ${leftOut === 1 ? "ticket" : "tickets"} issued in error for Zoom payments ${leftOut === 1 ? "is" : "are"} left out: ${leftOut === 1 ? "that person attends" : "those people attend"} online only.` : ""}${checked ? ` ${formatNumber(checked)} already checked in when this list was made.` : ""}`,
+    columns: [NO, { key: "name", header: "Name", width: 2.6 }, { key: "organisation", header: "Organisation", width: 2.4 }, { key: "ticket", header: "Ticket", width: 1.5 },
+      { key: "code", header: "Ticket code", width: 1.35 }, TICK,
+      { key: "buyer", header: "Bought by", width: 1.8, excelOnly: true }, { key: "status", header: "Checked in", width: 0.9, excelOnly: true }],
+    rows: named.map((a, i) => ({ no: i + 1, name: a.name!.trim(), organisation: a.organisation ?? "", ticket: ticketLabel(a), code: a.code, tick: "",
+      buyer: a.buyer && a.buyer.trim().toLowerCase() !== a.name!.trim().toLowerCase() ? a.buyer : "", status: a.checkedIn ? "Yes" : "" })),
+  });
+  if (unnamed.length) {
+    groups.push({
+      key: "in-person-unnamed", sheet: "In person - No name", currency, collected: null, count: unnamed.length,
+      title: "In person — Valid tickets with no name recorded",
+      summary: `${formatNumber(unnamed.length)} ${unnamed.length === 1 ? "ticket" : "tickets"} · ${kinds(unnamed)}`,
+      note: "These tickets are valid but nobody's name was recorded on them (mostly complimentary tickets handed out in batches). Check the code on the holder's e-ticket against this list (in code order), write their name in and tick the box.",
+      columns: [NO, { key: "code", header: "Ticket code", width: 1.6 }, { key: "ticket", header: "Ticket", width: 1.6 }, { key: "organisation", header: "Organisation", width: 2.6 },
+        { key: "written", header: "Name (write in)", width: 3.2, printOnly: true }, TICK, { key: "status", header: "Checked in", width: 0.9, excelOnly: true }],
+      rows: unnamed.map((a, i) => ({ no: i + 1, code: a.code, ticket: ticketLabel(a), organisation: a.organisation ?? "", written: "", tick: "", status: a.checkedIn ? "Yes" : "" })),
+    });
+  }
+
   const studentPrice = pagePrice(true);
   groups.push({
     key: "zoom-student", sheet: "Zoom - Students", currency,
@@ -100,20 +161,6 @@ export function buildRegistrants(input: {
     rows: buckets["zoom-regular"].map((r, i) => zoomRow(r, i, "position", /position|title|role|designation/i)),
     count: buckets["zoom-regular"].length, collected: total(buckets["zoom-regular"]),
   });
-  const inPerson = buckets["in-person"];
-  groups.push({
-    key: "in-person", sheet: "In person - Main ticket", currency,
-    title: `In person — Main ticket${seat ? ` · ${money(seat, input.seat.currency)}` : ""}`,
-    note: `Bought on Paystack for ${input.eventLine}. A payment of several times the ticket price covers that many tickets. Tickets paid by bank transfer or by an institution are on the Tickets page, not here.`,
-    columns: [NO, { key: "name", header: "Name", width: 2.1 }, { key: "email", header: "Email", width: 2.5 }, { key: "phone", header: "Phone", width: 1.3 },
-      { key: "tickets", header: "Tickets", width: 0.65, numeric: true }, { key: "amount", header: "Amount", width: 0.95, numeric: true }, PAID, REF],
-    rows: inPerson.map((r, i) => ({
-      no: i + 1, name: r.customer.name, email: (r.customer.email ?? "").toLowerCase(), phone: r.customer.phone ?? "",
-      tickets: seat && r.amount >= seat && r.amount % seat === 0 ? r.amount / seat : 1, amount: r.amount,
-      paid: paidOn(r.paidAt), reference: r.reference,
-    })),
-    count: inPerson.reduce((sum, r) => sum + (seat && r.amount >= seat && r.amount % seat === 0 ? r.amount / seat : 1), 0), collected: total(inPerson),
-  });
   if (buckets.other.length) {
     groups.push({
       key: "other", sheet: "Other payments", currency, title: "Other Paystack payments",
@@ -126,10 +173,9 @@ export function buildRegistrants(input: {
   return { title: `${input.eventName} — Registrants`, generatedAt: input.generatedAt, groups, truncated: input.truncated };
 }
 
-/** "6 registrants · GHS 600 collected" / "9 tickets (8 payments) · GHS 22,500 collected" */
+/** "6 registrants · GHS 600 collected", or the list's own summary ("512 people · 120 paid · 300 complimentary"). */
 export function groupSummary(group: RegistrantGroup): string {
-  const people = group.key === "in-person"
-    ? `${formatNumber(group.count)} ${group.count === 1 ? "ticket" : "tickets"}${group.count !== group.rows.length ? ` (${formatNumber(group.rows.length)} ${group.rows.length === 1 ? "payment" : "payments"})` : ""}`
-    : `${formatNumber(group.count)} ${group.count === 1 ? "registrant" : "registrants"}`;
-  return `${people} · ${money(group.collected, group.currency)} collected`;
+  if (group.summary) return group.summary;
+  const people = `${formatNumber(group.count)} ${group.count === 1 ? "registrant" : "registrants"}`;
+  return group.collected === null ? people : `${people} · ${money(group.collected, group.currency)} collected`;
 }

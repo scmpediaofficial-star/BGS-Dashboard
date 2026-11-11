@@ -6,7 +6,7 @@ import { groupSummary, money, type RegistrantGroup, type RegistrantsReport } fro
  * No libraries: the .xlsx is SpreadsheetML in a stored ZIP, the PDF uses the built-in Helvetica.
  */
 
-const CONFIDENTIAL = "Confidential: personal data of summit registrants. Share only with the summit team.";
+const CONFIDENTIAL = "Confidential: personal data of summit guests. Share only with the summit and security teams, and destroy after the event.";
 
 // ── ZIP (stored) ────────────────────────────────────────────────────────────
 function zip(files: { name: string; data: Bytes }[]): Blob {
@@ -87,7 +87,8 @@ function sheetXml(rows: Cell[][], widths: number[], freezeRow: number): string {
 
 const t = (value: string | number, style = 4): Cell => ({ value, style });
 
-function groupSheet(report: RegistrantsReport, group: RegistrantGroup): string {
+function groupSheet(report: RegistrantsReport, all: RegistrantGroup): string {
+  const group = { ...all, columns: all.columns.filter((c) => !c.printOnly) };
   const rows: Cell[][] = [
     [t(group.title, 1)],
     [t(`${groupSummary(group)} · ${report.title.replace(/ — Registrants$/, "")} · as at ${report.generatedAt}`, 2)],
@@ -105,18 +106,21 @@ function groupSheet(report: RegistrantsReport, group: RegistrantGroup): string {
   return sheetXml(rows, widths, 5);
 }
 
-export function registrantsXlsx(report: RegistrantsReport): Blob {
+/** Pass `only` to write just some of the lists. */
+export function registrantsXlsx(full: RegistrantsReport, only?: RegistrantGroup["key"][]): Blob {
+  const report = only ? { ...full, groups: full.groups.filter((g) => only.includes(g.key)) } : full;
   const encoder = new TextEncoder();
+  const collected = report.groups.filter((g) => g.collected !== null);
   const summary = sheetXml([
     [t(report.title, 1)],
     [t(`As at ${report.generatedAt} (Accra time). Each list is on its own sheet below.`, 2)],
     [t(CONFIDENTIAL, 2)],
     [],
-    [t("List", 3), t("Sheet", 3), t("Registrants / tickets", 3), t("Collected", 3)],
-    ...report.groups.map((g) => [t(g.title), t(g.sheet), t(g.count, 5), t(g.collected, 6)]),
+    [t("List", 3), t("Sheet", 3), t("People / tickets", 3), t("Collected on Paystack", 3)],
+    ...report.groups.map((g) => [t(g.title), t(g.sheet), t(g.count, 5), g.collected === null ? t("") : t(g.collected, 6)]),
     [],
-    [t("Total", 7), t(""), t(report.groups.reduce((n, g) => n + g.count, 0), 7), t(report.groups.reduce((n, g) => n + g.collected, 0), 8)],
-  ], [48, 26, 22, 16], 0);
+    [t("Total", 7), t(""), t(report.groups.reduce((n, g) => n + g.count, 0), 7), collected.length ? t(collected.reduce((n, g) => n + (g.collected ?? 0), 0), 8) : t("")],
+  ], [52, 26, 18, 22], 0);
   const sheets = [{ name: "Summary", xml: summary }, ...report.groups.map((g) => ({ name: g.sheet.slice(0, 31), xml: groupSheet(report, g) }))];
   const files = [
     { name: "[Content_Types].xml", text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -195,9 +199,15 @@ class Page {
   rect(x: number, y: number, w: number, h: number, color: string) {
     this.ops.push(`${color} rg ${x.toFixed(2)} ${(PAGE_H - y - h).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re f`);
   }
+  /** An empty square outline, to tick by hand. */
+  box(x: number, y: number, size: number, color: string) {
+    this.ops.push(`${color} RG 0.8 w ${x.toFixed(2)} ${(PAGE_H - y - size).toFixed(2)} ${size.toFixed(2)} ${size.toFixed(2)} re S`);
+  }
 }
 
-export function registrantsPdf(report: RegistrantsReport): Blob {
+/** Pass `only` to print just some of the lists — e.g. the door lists for security. */
+export function registrantsPdf(full: RegistrantsReport, only?: RegistrantGroup["key"][]): Blob {
+  const report = only ? { ...full, groups: full.groups.filter((g) => only.includes(g.key)) } : full;
   const pages: Page[] = [];
   let page = new Page();
   let y = 0;
@@ -220,7 +230,8 @@ export function registrantsPdf(report: RegistrantsReport): Blob {
       let x = MARGIN;
       columns.forEach((c, i) => {
         const label = fit(c.header, widths[i] - 8, SIZE, true);
-        page.text(c.numeric ? x + widths[i] - 4 : x + 4, y + 11.5, label, SIZE, { bold: true, color: "1 1 1", align: c.numeric ? "right" : "left" });
+        const left = c.tickBox ? x + (widths[i] - width(label, SIZE, true)) / 2 : c.numeric ? x + widths[i] - 4 : x + 4;
+        page.text(left, y + 11.5, label, SIZE, { bold: true, color: "1 1 1", align: c.numeric && !c.tickBox ? "right" : "left" });
         x += widths[i];
       });
       y += ROW_H;
@@ -238,6 +249,11 @@ export function registrantsPdf(report: RegistrantsReport): Blob {
       page.rect(MARGIN, y + ROW_H - 0.5, TABLE_W, 0.5, RULE);
       let x = MARGIN;
       columns.forEach((c, i) => {
+        if (c.tickBox) {
+          page.box(x + (widths[i] - 10) / 2, y + 3.5, 10, INK);
+          x += widths[i];
+          return;
+        }
         const raw = row[c.key] ?? "";
         const value = typeof raw === "number" ? (c.key === "amount" ? money(raw, group.currency) : String(raw)) : raw;
         page.text(c.numeric ? x + widths[i] - 4 : x + 4, y + 11.5, fit(value, widths[i] - 8, SIZE, c.key === "name"), SIZE, { bold: c.key === "name", align: c.numeric ? "right" : "left" });

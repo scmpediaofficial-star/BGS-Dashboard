@@ -11,7 +11,7 @@ import { siteUrl } from "@/lib/env";
 import { closeCheckoutsIfDue, getCheckoutSchedule, listCheckouts } from "@/lib/paystack-checkout";
 import { lastPaystackCheck, syncPaystackSales } from "@/lib/paystack-sync";
 import { getBalance, isPaystackConfigured, listCustomers, listDisputes, listPaymentPages, listPayments, listPayouts, listRefunds, listRegistrations, paystackMode } from "@/lib/paystack";
-import { buildRegistrants } from "@/components/payments/registrants";
+import { buildRegistrants, type Admission } from "@/components/payments/registrants";
 import { formatDate, formatTime } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Payments" };
@@ -49,6 +49,25 @@ async function loadLedger(supabase: Session["supabase"], reread = false) {
   return { byPayment, byCustomer, totals };
 }
 
+/** Every valid in-person ticket, a thousand at a time (the API's limit per request): the list security checks at the door. */
+async function loadAdmissions(supabase: Session["supabase"]): Promise<Admission[]> {
+  const rows: Admission[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from("tickets")
+      .select("code, kind, status, holder_name, organization, role_label, institution:institutions(name), sale:ticket_sales(buyer_name, organization, paystack_id, institution:institutions(name))")
+      .neq("status", "void").order("seq").range(from, from + 999);
+    if (error) throw new Error(error.message);
+    for (const t of data ?? []) {
+      rows.push({
+        code: t.code, kind: t.kind, checkedIn: t.status === "checked_in", name: t.holder_name, role: t.role_label,
+        organisation: t.organization?.trim() || t.institution?.name || t.sale?.institution?.name || t.sale?.organization?.trim() || null,
+        buyer: t.sale?.buyer_name ?? null, paystackId: t.sale?.paystack_id ?? null,
+      });
+    }
+    if (!data || data.length < 1000) return rows;
+  }
+}
+
 export default async function PaymentsPage({ searchParams }: PageProps<"/payments">) {
   const { supabase } = await requireRole("manager");
   const params = await searchParams;
@@ -77,7 +96,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
       listCheckouts().catch((error) => { console.error("[payments] could not list checkouts:", error); return null; }),
       getCheckoutSchedule().catch(() => null),
     ]);
-    const registrations = tab === "registrants" ? await listRegistrations() : null;
+    const [registrations, admissions] = tab === "registrants" ? await Promise.all([listRegistrations(), loadAdmissions(supabase)]) : [null, null];
     // A successful payment that the ledger doesn't hold yet is imported here and now.
     let ledger = firstLedger;
     if (settings.tickets.auto_import && payments.items.some((p) => p.status === "success" && !ledger.byPayment[String(p.id)])) {
@@ -96,9 +115,9 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
       payouts: payouts?.items,
       disputes: disputes?.items,
       pages: tab === "pages" ? pages?.items : undefined,
-      registrants: registrations && pages
+      registrants: registrations && pages && admissions
         ? buildRegistrants({
-          registrations: registrations.items, pages: pages.items, truncated: registrations.truncated || pages.truncated,
+          registrations: registrations.items, pages: pages.items, truncated: registrations.truncated || pages.truncated, admissions,
           seat: { price: types.data?.[0]?.price ?? null, currency: types.data?.[0]?.currency ?? "GHS" },
           eventName: settings.event.name, eventLine: `${settings.event.venue}, ${settings.event.city}, on ${formatDate(settings.event.starts_at)}`,
           generatedAt: `${formatDate(new Date())}, ${formatTime(new Date())}`,
