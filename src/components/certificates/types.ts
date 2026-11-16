@@ -49,7 +49,8 @@ export function certificateRows(tickets: CertTicket[], sales: CertSale[], instit
  * "John kemeh" → "John Kemeh", "MR.ENOCH" → "Mr. Enoch". A name typed in mixed case ("McDonald") is kept as written.
  */
 export function certificateName(raw: string): string {
-  const name = raw.replace(/\s+/g, " ").trim().replace(/^(mr|mrs|ms|miss|dr|prof|rev|hon)\.(?=\S)/i, "$1. ");
+  // Invisible characters pasted in with a name (zero-width spaces, word joiners) are dropped.
+  const name = raw.replace(/[\u200B-\u200D\u2060\uFEFF]/g, "").replace(/\s+/g, " ").trim().replace(/^(mr|mrs|ms|miss|dr|prof|rev|hon)\.(?=\S)/i, "$1. ");
   const shouting = name === name.toUpperCase();
   const cap = (part: string) => part.charAt(0).toUpperCase() + part.slice(1);
   return name.split(" ").map((word) => {

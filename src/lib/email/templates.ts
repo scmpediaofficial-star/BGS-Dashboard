@@ -220,6 +220,7 @@ export type CertificateInput = {
   /** One per person; each PDF is attached under its file name. Several when one address registered several people. */
   certificates: { name: string; code: string; fileName: string }[];
   /** A team test: says so at the top and in the subject. */ test?: boolean;
+  /** A second send, for people who could not find the first: says so in the subject and opening line. */ resent?: boolean;
 };
 
 /** Sent to each attendee after the summit, with their certificate of attendance attached as a PDF. */
@@ -243,7 +244,7 @@ export function certificateEmail(input: CertificateInput): Rendered {
     ? "If your name should be spelt differently, reply to this email with the correct spelling and we will send you a corrected certificate."
     : "If a name should be spelt differently, reply to this email with the correct spelling and we will send a corrected certificate.";
   return {
-    subject: `${input.test ? "[Test] " : ""}${one ? "Your certificate" : "Certificates"} of attendance — ${input.brand.eventName}`,
+    subject: `${input.test ? "[Test] " : ""}${one ? "Your certificate" : "Certificates"} of attendance — ${input.brand.eventName}${input.resent ? " (sent again)" : ""}`,
     html: layout({
       brand: input.brand,
       preheader: `${one ? "Your certificate" : "Certificates"} of attendance for the ${input.brand.eventName}${one ? " is" : " are"} attached.`,
@@ -253,6 +254,7 @@ export function certificateEmail(input: CertificateInput): Rendered {
       showPreferences: false,
       footerNote: `You are receiving this because you held a ticket for the ${input.brand.eventName}. Questions? Reply to this email or write to ${input.replyTo}.`,
       bodyHtml: `${test}${paragraph(one ? `Dear ${one.name},` : "Hello,")}
+        ${input.resent ? paragraph(`We are sending your certificate${one ? "" : "s"} again in case our first email did not reach you. If you already have ${one ? "it" : "them"}, there is nothing more to do.`) : ""}
         ${paragraph(thanks)}
         ${paragraph(attached)}
         ${factTable(facts)}
@@ -262,6 +264,7 @@ export function certificateEmail(input: CertificateInput): Rendered {
     text: plain([
       input.test && "TEST FOR THE BGS TEAM: every attendee will get exactly this email, with their own certificate attached.\n",
       one ? `Dear ${one.name},` : "Hello,", "",
+      input.resent && `We are sending your certificate${one ? "" : "s"} again in case our first email did not reach you. If you already have ${one ? "it" : "them"}, there is nothing more to do.\n`,
       thanks, "",
       attached, "",
       ...(one ? [`Name on certificate: ${one.name}`, `Certificate no.: ${one.code}`, `Date: ${input.dateLine}`] : list.map((c) => `${c.code}: ${c.name}`)), "",
