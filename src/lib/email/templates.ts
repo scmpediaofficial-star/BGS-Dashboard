@@ -215,6 +215,62 @@ export type AccessInput = {
   joinUrl?: string | null; meetingId?: string | null; supportEmail: string; eventStartsLabel: string;
 };
 
+export type CertificateInput = {
+  brand: Brand; dateLine: string; venueLine: string; replyTo: string;
+  /** One per person; each PDF is attached under its file name. Several when one address registered several people. */
+  certificates: { name: string; code: string; fileName: string }[];
+  /** A team test: says so at the top and in the subject. */ test?: boolean;
+};
+
+/** Sent to each attendee after the summit, with their certificate of attendance attached as a PDF. */
+export function certificateEmail(input: CertificateInput): Rendered {
+  const list = input.certificates;
+  const one = list.length === 1 ? list[0] : null;
+  const test = input.test
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 4px"><tr>
+        <td style="padding:12px 16px;border-radius:12px;background:#fff6d6;border:1px solid #f1d98a;font-family:${FONT};font-size:13px;line-height:1.55;color:#6b5200">
+          <strong>Test for the BGS team.</strong> Every attendee will get exactly this email, with their own certificate attached. This copy is made out to you. If anything needs changing, reply before the certificates go out.
+        </td></tr></table>`
+    : "";
+  const thanks = `Thank you for attending the ${input.brand.eventName} on ${input.dateLine} at the ${input.venueLine}. It was a pleasure to have you with us.`;
+  const attached = one
+    ? `Your certificate of attendance is attached to this email as a PDF (${one.fileName}). You can save it, print it or share it.`
+    : `The certificates of attendance for the ${list.length} people registered with this email address are attached, one PDF each. Please pass each one on to its holder.`;
+  const facts = one
+    ? [{ label: "Name on certificate", value: one.name }, { label: "Certificate no.", value: one.code }, { label: "Date", value: input.dateLine }]
+    : list.map((c) => ({ label: c.code, value: c.name }));
+  const spelling = one
+    ? "If your name should be spelt differently, reply to this email with the correct spelling and we will send you a corrected certificate."
+    : "If a name should be spelt differently, reply to this email with the correct spelling and we will send a corrected certificate.";
+  return {
+    subject: `${input.test ? "[Test] " : ""}${one ? "Your certificate" : "Certificates"} of attendance — ${input.brand.eventName}`,
+    html: layout({
+      brand: input.brand,
+      preheader: `${one ? "Your certificate" : "Certificates"} of attendance for the ${input.brand.eventName}${one ? " is" : " are"} attached.`,
+      eyebrow: one ? "Certificate of attendance" : "Certificates of attendance",
+      heading: "Thank you for joining us",
+      tone: "good",
+      showPreferences: false,
+      footerNote: `You are receiving this because you held a ticket for the ${input.brand.eventName}. Questions? Reply to this email or write to ${input.replyTo}.`,
+      bodyHtml: `${test}${paragraph(one ? `Dear ${one.name},` : "Hello,")}
+        ${paragraph(thanks)}
+        ${paragraph(attached)}
+        ${factTable(facts)}
+        ${paragraph(spelling)}
+        ${paragraph("We look forward to welcoming you again.\nThe BGS 2026 team")}`,
+    }),
+    text: plain([
+      input.test && "TEST FOR THE BGS TEAM: every attendee will get exactly this email, with their own certificate attached.\n",
+      one ? `Dear ${one.name},` : "Hello,", "",
+      thanks, "",
+      attached, "",
+      ...(one ? [`Name on certificate: ${one.name}`, `Certificate no.: ${one.code}`, `Date: ${input.dateLine}`] : list.map((c) => `${c.code}: ${c.name}`)), "",
+      spelling, "",
+      "We look forward to welcoming you again.", "The BGS 2026 team",
+    ]),
+  };
+}
+
 /** Sent to paying virtual participants (outside the team) with their personal access code. */
 export function virtualAccessEmail(input: AccessInput): Rendered {
   return {
