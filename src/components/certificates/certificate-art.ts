@@ -3,7 +3,7 @@ import { canvas, crc32, toBytes, type Bytes } from "@/components/tickets/ticket-
 /**
  * The certificate of attendance, drawn in the browser (A4 landscape, 300 dpi).
  *
- * Purple side panel with the summit logo, an open white page, a script name and
+ * Purple side panel with the summit logo, an open white page, the name in an italic serif and
  * — for members of an institution — that institution's logo at the top right.
  *
  * PNG  = the whole certificate on one canvas.
@@ -36,17 +36,19 @@ const LEFT_SLOT = 2120;
 const RIGHT_SLOT = 3050;
 const LINE_Y = 2148;
 const SIGNATURE_MAX = { w: 560, h: 200 };
-const LOGO_MAX = { w: 330, h: 260 };
+const LOGO_MAX = { w: 420, h: 260 }; // wide logos (FAGE) use the corner's full width
 
 export type CertificateSignatory = { name: string; title: string | null; signatureUrl: string | null };
 export type CertificateFace = { code: string; name: string; institution: { name: string; logoUrl: string | null; signatory: CertificateSignatory | null } | null };
 export type CertificateEvent = { title: string; dateLine: string; venueLine: string; theme: string; convener: string };
 
-const SCRIPT_URL = "/fonts/GreatVibes-Regular.ttf";
+/** Playfair Display Italic (SIL OFL): formal, with ordinary capital letters (a script's swash capitals read as small letters). */
+const NAME_FONT_URL = "/fonts/PlayfairDisplay-Italic-Variable.ttf";
+const NAME_STYLE = "italic 600";
 const WHITE_LOGO_URL = "/brand/logo-white.png";
 const CONVENER_SIGNATURE_URL = "/brand/signatures/convener.png";
 
-type Assets = { family: string; script: string; brand: HTMLImageElement; convener: HTMLImageElement | null };
+type Assets = { family: string; nameFont: string; brand: HTMLImageElement; convener: HTMLImageElement | null };
 let assets: Promise<Assets> | undefined;
 
 async function loadImage(url: string): Promise<HTMLImageElement> {
@@ -69,14 +71,14 @@ function loadAssets(): Promise<Assets> {
   assets ??= (async () => {
     const brand = getComputedStyle(document.documentElement).getPropertyValue("--font-montserrat").trim();
     const family = `${brand ? `${brand}, ` : ""}"Helvetica Neue", Helvetica, Arial, sans-serif`;
-    const script = new FontFace("BGS Script", `url(${SCRIPT_URL})`);
-    document.fonts.add(await script.load());
+    const nameFace = new FontFace("BGS Name", `url(${NAME_FONT_URL})`, { style: "italic", weight: "400 900" });
+    document.fonts.add(await nameFace.load());
     const [image, convener] = await Promise.all([
       loadImage(WHITE_LOGO_URL),
       loadImage(CONVENER_SIGNATURE_URL).catch(() => null),
       ...["400", "500", "700", "800"].map((weight) => document.fonts.load(`${weight} 40px ${family}`).catch(() => [])),
     ]);
-    return { family, script: '"BGS Script", "Snell Roundhand", cursive', brand: image, convener };
+    return { family, nameFont: '"BGS Name", "Playfair Display", Georgia, "Times New Roman", serif', brand: image, convener };
   })();
   assets.catch(() => { assets = undefined; });
   return assets;
@@ -195,19 +197,22 @@ function clean(name: string): string {
   return name.replace(/\s+/g, " ").trim();
 }
 
-/** The largest script that keeps the whole name inside the box: one line, then two, then smaller. */
-function fitName(ctx: CanvasRenderingContext2D, name: string, script: string, w: number, h: number): { lines: string[]; size: number } {
-  const set = (size: number) => { ctx.font = `400 ${size}px ${script}`; };
+/**
+ * The largest size that keeps the whole name inside the box: one line, then two, then smaller.
+ * A line of this serif needs about 1.3 × its size from the tallest capital to the lowest descender.
+ */
+function fitName(ctx: CanvasRenderingContext2D, name: string, font: string, w: number, h: number): { lines: string[]; size: number } {
+  const set = (size: number) => { ctx.font = `${NAME_STYLE} ${size}px ${font}`; };
   const width = (text: string) => ctx.measureText(text).width;
-  for (let size = 230; size >= 130; size -= 6) {
+  for (let size = 170; size >= 100; size -= 4) {
     set(size);
-    if (width(name) <= w) return { lines: [name], size };
+    if (width(name) <= w && size * 1.3 <= h) return { lines: [name], size };
   }
   const words = name.split(" ");
   if (words.length > 1) {
-    for (let size = 150; size >= 80; size -= 4) {
+    for (let size = 112; size >= 64; size -= 4) {
       set(size);
-      if (size * 1.9 > h) continue;
+      if (size * 2.45 > h) continue;
       let best: string[] | null = null;
       let bestWidth = Infinity;
       for (let i = 1; i < words.length; i++) {
@@ -218,26 +223,31 @@ function fitName(ctx: CanvasRenderingContext2D, name: string, script: string, w:
       if (best && bestWidth <= w) return { lines: best, size };
     }
   }
-  for (let size = 120; size >= 50; size -= 4) {
+  for (let size = 96; size >= 40; size -= 4) {
     set(size);
     if (width(name) <= w) return { lines: [name], size };
   }
-  return { lines: [name], size: 50 };
+  return { lines: [name], size: 40 };
 }
 
-function drawName(ctx: CanvasRenderingContext2D, name: string, { script }: Assets) {
+function drawName(ctx: CanvasRenderingContext2D, name: string, { nameFont }: Assets) {
   const { w, h } = NAME_BOX;
   ctx.fillStyle = WHITE;
   ctx.fillRect(0, 0, w, h);
-  const { lines, size } = fitName(ctx, clean(name), script, w - 20, h - 10);
-  ctx.font = `400 ${size}px ${script}`;
+  const { lines, size } = fitName(ctx, clean(name), nameFont, w - 24, h - 12);
+  ctx.font = `${NAME_STYLE} ${size}px ${nameFont}`;
   ctx.fillStyle = PURPLE;
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
-  const lineHeight = size * 0.95;
-  let y = (h - lines.length * lineHeight) / 2 + size * 0.72;
+  // Centre the ink itself, measured, so tall capitals and descenders never touch the edges.
+  const lineHeight = size * 1.15;
+  const first = ctx.measureText(lines[0]);
+  const last = ctx.measureText(lines[lines.length - 1]);
+  const ascent = first.actualBoundingBoxAscent || size * 0.9;
+  const descent = last.actualBoundingBoxDescent || size * 0.3;
+  let y = (h - (ascent + (lines.length - 1) * lineHeight + descent)) / 2 + ascent;
   for (const line of lines) {
-    ctx.fillText(line, 10, y, w - 20);
+    ctx.fillText(line, 12, y, w - 24);
     y += lineHeight;
   }
   ctx.textBaseline = "middle";
