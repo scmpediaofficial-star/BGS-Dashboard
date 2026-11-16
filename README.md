@@ -12,6 +12,7 @@ Next.js 16 · Supabase (Postgres, Auth, Realtime, Storage) · Resend · installa
 | **Deliverables** | The team's Google Sheet, imported: table + drag-and-drop board, filters, checklists, comments, assignees, CSV export |
 | **Panels & speakers · Outreach · Sponsorship · Tickets · Meetings** | Trackers for 42 panelists, 215 invitation letters/embassies, the sponsor pipeline, ticket sales with virtual-access codes, minutes and action points |
 | **Social Studio** | Compose once → tailor per network → approve → schedule → publish. LinkedIn, Facebook, Instagram, Threads, X, TikTok, WordPress, Bluesky, Mastodon, Telegram, plus a practice channel for dry runs |
+| **Website** | The news articles and extra gallery photos on boardroomgovsummit.com, which reads them from the same Supabase tables. Contributors draft in Markdown with a live preview; managers publish, unpublish and delete |
 | **Team & roles** | Invitation-only. Super Admin › Admin › Manager › Contributor › Viewer, enforced by Postgres row-level security |
 | **Alerts** | Every change writes the audit log, notifies the right people in-app (live), sends a branded Resend email and a push notification. Each person chooses instant / daily briefing / off per category |
 | **PWA** | Installable, offline fallback, saves retry automatically when the connection returns, web push, app-icon badge |
@@ -33,6 +34,7 @@ Next.js 16 · Supabase (Postgres, Auth, Realtime, Storage) · Resend · installa
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes | the publishable / anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | yes | the secret / service-role key — server only |
 | `NEXT_PUBLIC_SITE_URL` | recommended | e.g. `https://dashboard.boardroomgovsummit.com` (used in emails) |
+| `NEXT_PUBLIC_WEBSITE_URL` | optional | the public website, default `https://boardroomgovsummit.com`. Used for *View on website* links and to show images stored on the website (`/media/…`) |
 | `PAYSTACK_SECRET_KEY` | for payments | Paystack → Settings → API Keys & Webhooks → live secret key. Server only. See *Paystack and tickets* below |
 | `BULKSMSGH_API_KEY` | for bulk SMS | BulkSMSGH → clientlogin.bulksmsgh.com → API Documentation → generate a key. Server only. The sender ID is chosen in Settings → SMS |
 | `RESEND_API_KEY` | for email | without it, emails are rendered and kept in Settings → Email instead of sent |

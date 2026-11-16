@@ -4,15 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
 import { Dialog as RadixDialog } from "radix-ui";
-import { CornerDownLeft, Handshake, ListChecks, LoaderCircle, Mails, MicVocal, PenSquare, Plus, Search, UserPlus } from "lucide-react";
+import { CornerDownLeft, Handshake, ListChecks, LoaderCircle, Mails, MicVocal, Newspaper, PenSquare, Plus, Search, SquarePen, UserPlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { NAV_ITEMS } from "@/components/shell/nav";
 import { useViewer } from "@/components/shell/session-context";
 import { Kbd } from "@/components/ui/misc";
 import { hasRole } from "@/lib/auth/permissions";
 
-type Hit = { id: string; label: string; sub: string; href: string; kind: "deliverable" | "panelist" | "sponsor" | "outreach" };
-const KIND_ICON = { deliverable: ListChecks, panelist: MicVocal, sponsor: Handshake, outreach: Mails };
+type Hit = { id: string; label: string; sub: string; href: string; kind: "deliverable" | "panelist" | "sponsor" | "outreach" | "article" };
+const KIND_ICON = { deliverable: ListChecks, panelist: MicVocal, sponsor: Handshake, outreach: Mails, article: Newspaper };
 
 const group = "[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:text-[10.5px] [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-ink-3";
 const row = "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-ink data-[selected=true]:bg-surface-3 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-ink-3";
@@ -59,11 +59,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       const like = `%${term.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
       // Inside an or() tree, commas and brackets are syntax: quote the value and escape quotes/backslashes.
       const quoted = `"${like.replace(/["\\]/g, (c) => `\\${c}`)}"`;
-      const [deliverables, panelists, sponsors, outreach] = await Promise.all([
+      const [deliverables, panelists, sponsors, outreach, articles] = await Promise.all([
         supabase.from("deliverables").select("id, title, section").ilike("title", like).limit(6),
         supabase.from("panelists").select("id, full_name, organization").or(`full_name.ilike.${quoted},organization.ilike.${quoted}`).limit(6),
         supabase.from("sponsors").select("id, organization, package").ilike("organization", like).limit(4),
         supabase.from("outreach_contacts").select("id, name, category, list").ilike("name", like).limit(6),
+        supabase.from("website_articles").select("id, title, category").ilike("title", like).limit(4),
       ]);
       if (request !== requestRef.current) return; // a newer keystroke won
       setHits([
@@ -71,6 +72,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         ...(panelists.data ?? []).map((p): Hit => ({ id: p.id, label: p.full_name, sub: p.organization ?? "Panelist", href: `/panels?item=${p.id}`, kind: "panelist" })),
         ...(sponsors.data ?? []).map((s): Hit => ({ id: s.id, label: s.organization, sub: s.package ?? "Sponsor", href: `/sponsorship?item=${s.id}`, kind: "sponsor" })),
         ...(outreach.data ?? []).map((o): Hit => ({ id: o.id, label: o.name, sub: o.category, href: `/outreach?item=${o.id}`, kind: "outreach" })),
+        ...(articles.data ?? []).map((a): Hit => ({ id: a.id, label: a.title, sub: a.category, href: `/website?item=${a.id}`, kind: "article" })),
       ]);
       setSearching(false);
     }, 180);
@@ -86,6 +88,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const actions = [
     can("records.write") && { label: "New deliverable", icon: Plus, href: "/deliverables?new=1" },
     can("social.draft") && { label: "Compose a social post", icon: PenSquare, href: "/social/compose" },
+    can("website.write") && { label: "Write a news article", icon: SquarePen, href: "/website?new=1" },
     can("team.manage") && { label: "Invite a team member", icon: UserPlus, href: "/team?invite=1" },
   ].filter((a): a is { label: string; icon: typeof Plus; href: string } => Boolean(a));
 

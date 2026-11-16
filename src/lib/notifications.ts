@@ -9,6 +9,7 @@ export const CATEGORIES = {
   meetings: { label: "Meetings & actions", description: "Meetings, minutes and action points." },
   sms: { label: "Bulk SMS", description: "Text messages sent to delegates, contacts and uploaded lists, and how they went." },
   social: { label: "Social Studio", description: "Approvals, scheduled posts, publishing results and account health." },
+  website: { label: "Website", description: "News articles drafted, published or taken down, and photos added to the gallery." },
   team: { label: "Team & access", description: "Invitations, role changes and deactivations." },
   system: { label: "System", description: "Settings, integrations and scheduler changes." },
 } as const;

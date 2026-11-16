@@ -1,5 +1,5 @@
 import {
-  Activity, Award, Building2, CalendarRange, CreditCard, Handshake, LayoutDashboard, ListChecks, Mails, MessageSquareText, MicVocal, NotebookPen, Settings, Share2, Ticket, UsersRound,
+  Activity, Award, Building2, CalendarRange, CreditCard, Handshake, Images, LayoutDashboard, ListChecks, Mails, MessageSquareText, MicVocal, Newspaper, NotebookPen, Settings, Share2, Ticket, UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "@/lib/auth/permissions";
@@ -51,6 +51,13 @@ export const NAV: NavGroup[] = [
     items: [
       { href: "/social", label: "Calendar & posts", icon: CalendarRange, match: ["/social/posts", "/social/compose"], badge: "approvals", keywords: "schedule publish linkedin facebook instagram tiktok x wordpress" },
       { href: "/social/accounts", label: "Channels & media", icon: Share2, match: ["/social/media", "/social/accounts"], keywords: "accounts connect library images video" },
+    ],
+  },
+  {
+    label: "Website",
+    items: [
+      { href: "/website", label: "News articles", icon: Newspaper, keywords: "website boardroomgovsummit.com news articles speeches insights announcements blog publish" },
+      { href: "/website/gallery", label: "Gallery", icon: Images, keywords: "website photos pictures albums edition upload" },
     ],
   },
   {

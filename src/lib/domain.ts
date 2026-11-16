@@ -1,5 +1,5 @@
 import {
-  Ban, CircleCheck, CircleDashed, CircleDot, CircleX, DoorOpen, Eye, FileEdit, Flag, GraduationCap, Hourglass, Inbox, LoaderCircle,
+  Ban, CalendarClock, CircleCheck, CircleDashed, CircleDot, CircleX, DoorOpen, Eye, FileEdit, Flag, Globe, GraduationCap, Hourglass, Inbox, LoaderCircle,
   MailCheck, MicVocal, Send, Signal, SignalHigh, SignalLow, SignalMedium, Sparkles, ThumbsUp, Ticket, Timer, TriangleAlert, Handshake, Undo2,
   type LucideIcon,
 } from "lucide-react";
@@ -15,6 +15,7 @@ export type SponsorStage = Enums["sponsor_stage"];
 export type ActionStatus = Enums["action_status"];
 export type PaymentStatus = Enums["payment_status"];
 export type SocialPostStatus = Enums["social_post_status"];
+export type ArticleStatus = Enums["article_status"];
 
 export type Meta = { label: string; tone: Tone; icon: LucideIcon; /** CSS colour for chart marks */ color: string };
 
@@ -87,6 +88,14 @@ export const SOCIAL_POST_STATUS: Record<SocialPostStatus, Meta> = {
   partial: { label: "Partly published", tone: "serious", icon: TriangleAlert, color: "var(--serious)" },
   failed: { label: "Failed", tone: "critical", icon: CircleX, color: "var(--critical)" },
 };
+
+export const ARTICLE_STATUS: Record<ArticleStatus, Meta> = {
+  draft: { label: "Draft", tone: "neutral", icon: FileEdit, color: "var(--neutral)" },
+  published: { label: "Published", tone: "good", icon: Globe, color: "var(--good)" },
+};
+export const ARTICLE_STATUS_ORDER: ArticleStatus[] = ["draft", "published"];
+/** A published article whose date hasn't arrived: the website holds it back until then. */
+export const ARTICLE_SCHEDULED: Meta = { label: "Scheduled", tone: "accent", icon: CalendarClock, color: "var(--accent)" };
 
 export const TICKET_CHANNELS = [
   { value: "website", label: "Website" },

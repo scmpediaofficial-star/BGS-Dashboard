@@ -14,7 +14,7 @@ type ImageUploadProps = {
   value: string | null;
   onChange: (url: string | null) => void;
   /** Folder inside the public `assets` bucket. */
-  folder: "avatars" | "panelists" | "sponsors" | "institutions";
+  folder: "avatars" | "panelists" | "sponsors" | "institutions" | "website";
   label: string;
   shape?: "circle" | "square";
   disabled?: boolean;

@@ -1657,6 +1657,122 @@ export type Database = {
           },
         ]
       }
+      website_articles: {
+        Row: {
+          author: string | null
+          body: string
+          category: string
+          cover_alt: string
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          excerpt: string
+          id: string
+          published_at: string | null
+          slug: string
+          status: Database["public"]["Enums"]["article_status"]
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          author?: string | null
+          body?: string
+          category?: string
+          cover_alt?: string
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          excerpt?: string
+          id?: string
+          published_at?: string | null
+          slug: string
+          status?: Database["public"]["Enums"]["article_status"]
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          author?: string | null
+          body?: string
+          category?: string
+          cover_alt?: string
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          excerpt?: string
+          id?: string
+          published_at?: string | null
+          slug?: string
+          status?: Database["public"]["Enums"]["article_status"]
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_articles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_articles_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_gallery_photos: {
+        Row: {
+          album: string
+          caption: string
+          created_at: string
+          created_by: string | null
+          height: number | null
+          id: string
+          image_url: string
+          is_published: boolean
+          sort_order: number
+          width: number | null
+        }
+        Insert: {
+          album: string
+          caption?: string
+          created_at?: string
+          created_by?: string | null
+          height?: number | null
+          id?: string
+          image_url: string
+          is_published?: boolean
+          sort_order?: number
+          width?: number | null
+        }
+        Update: {
+          album?: string
+          caption?: string
+          created_at?: string
+          created_by?: string | null
+          height?: number | null
+          id?: string
+          image_url?: string
+          is_published?: boolean
+          sort_order?: number
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_gallery_photos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workstreams: {
         Row: {
           color_slot: number
@@ -1729,6 +1845,7 @@ export type Database = {
     }
     Enums: {
       action_status: "open" | "in_progress" | "done"
+      article_status: "draft" | "published"
       deliverable_status:
         | "pending"
         | "in_progress"
@@ -1888,6 +2005,7 @@ export const Constants = {
   public: {
     Enums: {
       action_status: ["open", "in_progress", "done"],
+      article_status: ["draft", "published"],
       deliverable_status: [
         "pending",
         "in_progress",

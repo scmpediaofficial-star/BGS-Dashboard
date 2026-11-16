@@ -20,12 +20,12 @@ export const ROLE_META: Record<Role, { label: string; summary: string; can: stri
   manager: {
     label: "Manager",
     summary: "Leads delivery. Approves and publishes.",
-    can: ["Approve, schedule and publish social posts", "Record ticket sales, issue tickets and work with Paystack payments", "Send bulk SMS to delegates and contacts", "Delete records"],
+    can: ["Approve, schedule and publish social posts", "Publish, unpublish and delete website news articles", "Record ticket sales, issue tickets and work with Paystack payments", "Send bulk SMS to delegates and contacts", "Delete records"],
   },
   contributor: {
     label: "Contributor",
     summary: "Does the work: updates trackers and drafts content.",
-    can: ["Create and update deliverables, panelists, outreach and sponsors", "Draft social posts and submit them for approval", "Upload media and comment"],
+    can: ["Create and update deliverables, panelists, outreach and sponsors", "Draft social posts and submit them for approval", "Draft website news articles and add gallery photos", "Upload media and comment"],
   },
   viewer: {
     label: "Viewer",
@@ -51,6 +51,8 @@ export const CAPABILITIES = {
   "social.draft": "contributor",
   "social.publish": "manager",
   "social.accounts": "admin",
+  "website.write": "contributor",
+  "website.publish": "manager",
   "team.manage": "admin",
   "settings.manage": "admin",
   "email.log": "admin",
