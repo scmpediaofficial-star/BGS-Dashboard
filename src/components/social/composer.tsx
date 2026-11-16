@@ -1,8 +1,8 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeft, CalendarClock, CircleAlert, CircleCheck, ExternalLink, FileText, Hash, ImagePlus, Link2, LoaderCircle, RotateCcw, Rocket, Save, Send, SlidersHorizontal, Sparkles, Trash2, Undo2, X,
 } from "lucide-react";
@@ -64,7 +64,7 @@ function nextSlot(queue: Queue, taken: string[], from = Date.now()): string | nu
 
 export function Composer({ post, accounts, media, templates, hashtagGroups, taken, queue, startDay, variables }: Props) {
   const { viewer, can } = useViewer();
-  const router = useRouter();
+  const router = useNavRouter();
   const manager = can("social.publish");
   const status: SocialPostStatus = post?.status ?? "draft";
   const mine = !post || post.author_id === viewer.id;

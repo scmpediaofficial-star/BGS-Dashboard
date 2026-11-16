@@ -1,7 +1,8 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { NotebookPen, Plus, Printer, Trash2 } from "lucide-react";
 import { createActionsFromMinutes, deleteMeeting, saveMeeting } from "@/app/(app)/meetings/actions";
 import { RecordTracker, type TrackerRow } from "@/components/shared/record-tracker";
@@ -30,7 +31,7 @@ function asAttendees(value: Json): string[] { return Array.isArray(value) ? valu
 export function MeetingsView({ meetings, actions, people }: { meetings: Meeting[]; actions: Action[]; people: { id: string; full_name: string }[] }) {
   const { can } = useViewer();
   useRealtimeRefresh(["meetings", "action_items"]);
-  const router = useRouter(), pathname = usePathname(), params = useSearchParams();
+  const router = useNavRouter(), pathname = usePathname(), params = useSearchParams();
   const selectedId = params.get("meeting") ?? (meetings.find((m) => asSections(m.sections).length)?.id ?? meetings[0]?.id);
   const selected = meetings.find((m) => m.id === selectedId);
   const [editing, setEditing] = useState(false);

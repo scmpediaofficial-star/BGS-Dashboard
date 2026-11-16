@@ -1,8 +1,9 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ExternalLink, Images, Newspaper, Plus, Search, X } from "lucide-react";
 import { publishArticle, unpublishArticle } from "@/app/(app)/website/actions";
 import { SegmentedBar } from "@/components/charts/segmented-bar";
@@ -29,7 +30,7 @@ type Props = { articles: Article[]; today: string; now: string };
 
 export function ArticlesView({ articles, today, now }: Props) {
   const { can } = useViewer();
-  const router = useRouter();
+  const router = useNavRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   useRealtimeRefresh(["website_articles"]);

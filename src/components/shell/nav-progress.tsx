@@ -4,12 +4,13 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 import { useLinkStatus } from "next/link";
+import { NAV_START } from "@/lib/hooks/use-nav-router";
 import { cn } from "@/lib/utils";
 
 /**
  * Instant feedback for every navigation: a thin bar across the top of the
  * window (and a "busy" cursor) from the moment a link is pressed until the new
- * page has arrived. Links, the back button and filter changes all trigger it.
+ * page has arrived. Links, the back button and anything sent through useNavRouter() trigger it.
  */
 function Bar() {
   const pathname = usePathname();
@@ -42,7 +43,9 @@ function Bar() {
     };
     document.addEventListener("click", onClick, true);
     window.addEventListener("popstate", start);
+    window.addEventListener(NAV_START, start);
     return () => {
+      window.removeEventListener(NAV_START, start);
       document.removeEventListener("click", onClick, true);
       window.removeEventListener("popstate", start);
     };

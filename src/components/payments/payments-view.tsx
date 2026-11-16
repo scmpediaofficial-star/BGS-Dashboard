@@ -1,7 +1,8 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useCallback, useTransition } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Banknote, Building2, CircleCheck, Coins, Copy, ExternalLink, Landmark, RefreshCw, Scale, Settings, TicketX, Undo2, Wallet } from "lucide-react";
 import { syncPayments } from "@/app/(app)/payments/actions";
@@ -28,7 +29,7 @@ export function PaymentsView({ tab, data, webhookUrl }: { tab: PaymentTab; data:
   // The ledger half of this page changes when a sale is recorded or a webhook lands.
   useRealtimeRefresh(["ticket_sales", "tickets"]);
   useAutoImport(data.autoImport ? 60_000 : 0);
-  const router = useRouter();
+  const router = useNavRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [switching, startSwitch] = useTransition();

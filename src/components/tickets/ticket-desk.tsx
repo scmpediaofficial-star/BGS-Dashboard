@@ -1,8 +1,9 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, Download, FileImage, FileSpreadsheet, FileText, MicVocal, Plus, Search, Sparkles, Ticket, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { addProgrammeDelegates, deleteTickets, issueComplimentary, saveTicket, setTicketStatus } from "@/app/(app)/tickets/actions";
@@ -47,7 +48,7 @@ const holderLabel = (t: Pick<TicketRow, "kind" | "holder_name">) => t.holder_nam
 export function TicketDesk({ tickets, event, programmePending, institutions }: { tickets: TicketRow[]; event: TicketEvent; programmePending: number; institutions: InstitutionLite[] }) {
   const { can } = useViewer();
   const manage = can("tickets.manage");
-  const router = useRouter();
+  const router = useNavRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 

@@ -1,7 +1,8 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useCallback, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Download, KanbanSquare, ListFilter, Plus, Search, Table2, UserRound, X } from "lucide-react";
 import { setDeliverableStatus } from "@/app/(app)/deliverables/actions";
 import { SegmentedBar } from "@/components/charts/segmented-bar";
@@ -28,7 +29,7 @@ type Props = { workstreams: Workstream[]; deliverables: Deliverable[]; people: P
 
 export function DeliverablesView({ workstreams, deliverables, people, organizations, today }: Props) {
   const { viewer, can } = useViewer();
-  const router = useRouter();
+  const router = useNavRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   useRealtimeRefresh(["deliverables"]);

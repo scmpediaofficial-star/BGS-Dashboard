@@ -1,8 +1,8 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Bell, BellRing, CheckCheck, Inbox } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -19,7 +19,7 @@ const COLUMNS = "id, title, body, link, category, importance, read_at, created_a
 
 export function NotificationsBell({ initialUnread }: { initialUnread: number }) {
   const { viewer } = useViewer();
-  const router = useRouter();
+  const router = useNavRouter();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(initialUnread);
   const [items, setItems] = useState<Notification[] | null>(null);

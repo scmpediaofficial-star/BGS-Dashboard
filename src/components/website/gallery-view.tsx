@@ -1,8 +1,9 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { CircleAlert, CircleCheck, ExternalLink, EyeOff, FolderPlus, Hourglass, ImagePlus, Images, Info, LoaderCircle, Newspaper, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { addGalleryPhotos, deleteGalleryPhoto, saveGalleryCaption, setGalleryPhotoVisibility } from "@/app/(app)/website/actions";
@@ -34,7 +35,7 @@ type Props = { photos: GalleryPhoto[]; currentYear: string };
 
 export function GalleryView({ photos, currentYear }: Props) {
   const { viewer, can } = useViewer();
-  const router = useRouter();
+  const router = useNavRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   useRealtimeRefresh(["website_gallery_photos"]);

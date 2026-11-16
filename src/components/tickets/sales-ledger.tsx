@@ -1,8 +1,9 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { CreditCard, Download, Plus, Search, Send, Ticket, Trash2 } from "lucide-react";
 import { deleteSale, saveSale, saveVirtualSettings, sendVirtualAccess, setPaymentStatus } from "@/app/(app)/tickets/actions";
 import { useViewer } from "@/components/shell/session-context";
@@ -33,7 +34,7 @@ const unitPrice = (channel: Draft["channel"], type: TicketType | undefined, dire
 /** The sales ledger: what was sold, to whom and whether it has been paid. Tickets are issued from it automatically. */
 export function SalesLedger({ ticketTypes, sales, tickets, event, virtual, targets, directPrice }: { ticketTypes: TicketType[]; sales: Sale[]; tickets: TicketRow[]; event: TicketEvent; virtual: VirtualSettings; targets: Targets; directPrice: number }) {
   const { can } = useViewer();
-  const router = useRouter(), pathname = usePathname(), params = useSearchParams();
+  const router = useNavRouter(), pathname = usePathname(), params = useSearchParams();
   const selectedId = params.get("item"), creating = params.get("new") === "1";
   const selected = sales.find((s) => s.id === selectedId);
   const saleTickets = selected ? tickets.filter((t) => t.sale_id === selected.id) : [];

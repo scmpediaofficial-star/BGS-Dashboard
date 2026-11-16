@@ -1,7 +1,8 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useCallback, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Download, Plus, Search, Trash2 } from "lucide-react";
 import { savePanelist, setPanelistStatus, deletePanelist } from "@/app/(app)/panels/actions";
 import { saveContact, setContactStatus, deleteContact } from "@/app/(app)/outreach/actions";
@@ -44,7 +45,7 @@ const DELETE: Record<Kind, (id: string) => Promise<ActionResult>> = { panelists:
 export function RecordTracker({ kind, rows, groups = [], groupLabel = "Group", fields, title, description, eyebrow, table, extra }: Props) {
   const config = CONFIG[kind];
   const { can } = useViewer();
-  const router = useRouter();
+  const router = useNavRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   useRealtimeRefresh([table]);

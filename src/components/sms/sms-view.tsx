@@ -1,7 +1,8 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Coins, Megaphone, Settings } from "lucide-react";
 import { useViewer } from "@/components/shell/session-context";
 import { SmsCompose } from "@/components/sms/sms-compose";
@@ -22,7 +23,7 @@ type Props = { tab: "compose" | "history"; configured: boolean; balance: SmsBala
 export function SmsView({ tab, configured, balance, sms, audience, campaigns, openId, openMessages }: Props) {
   const { can } = useViewer();
   useRealtimeRefresh(["sms_campaigns", "sms_messages"]);
-  const router = useRouter();
+  const router = useNavRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const ready = configured && Boolean(sms.sender_id.trim());

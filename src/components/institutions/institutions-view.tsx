@@ -1,8 +1,9 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Building2, Coins, Plus, Search, Tag, Trash2, UserPlus, UsersRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { addMember, assignMembers, deleteInstitution, removeMember, saveInstitution, setInstitutionLogo, setInstitutionSignature } from "@/app/(app)/institutions/actions";
@@ -31,7 +32,7 @@ export function InstitutionsView({ institutions, sales, openId, directPrice }: P
   const { can } = useViewer();
   const manage = can("tickets.manage");
   useRealtimeRefresh(["institutions", "ticket_sales", "tickets"]);
-  const router = useRouter(), pathname = usePathname(), params = useSearchParams();
+  const router = useNavRouter(), pathname = usePathname(), params = useSearchParams();
   const open = (id: string | null) => { const q = new URLSearchParams(params.toString()); if (id) q.set("item", id); else q.delete("item"); router.replace(q.size ? `${pathname}?${q}` : pathname, { scroll: false }); };
 
   const membersBy = useMemo(() => { const m = new Map<string, MemberSale[]>(); for (const s of sales) if (s.institution_id) m.set(s.institution_id, [...(m.get(s.institution_id) ?? []), s]); return m; }, [sales]);

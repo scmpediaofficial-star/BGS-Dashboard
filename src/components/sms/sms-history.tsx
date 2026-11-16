@@ -1,8 +1,9 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, Copy, Download, MessageSquareText, Play, RotateCcw, Search } from "lucide-react";
 import { toast } from "sonner";
 import { continueCampaign, resendFailed } from "@/app/(app)/sms/actions";
@@ -37,7 +38,7 @@ const effectiveStatus = (c: Campaign) => (c.status === "sending" && Date.now() -
 const messageState = (m: Message) => (m.status === "sending" ? "queued" : m.status);
 
 export function SmsHistory({ campaigns, openId, openMessages, canSend }: { campaigns: Campaign[]; openId: string | null; openMessages: Message[]; canSend: boolean }) {
-  const router = useRouter();
+  const router = useNavRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [query, setQuery] = useState("");

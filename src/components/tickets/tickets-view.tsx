@@ -1,7 +1,8 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Settings } from "lucide-react";
 import { useViewer } from "@/components/shell/session-context";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ export function TicketsView({ ticketTypes, sales, tickets, institutions, attenda
   const { can } = useViewer();
   useRealtimeRefresh(["ticket_sales", "ticket_types", "tickets"]);
   useAutoImport();
-  const router = useRouter();
+  const router = useNavRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 

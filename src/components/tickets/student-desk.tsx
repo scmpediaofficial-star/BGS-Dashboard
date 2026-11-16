@@ -1,7 +1,8 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useCallback, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, Download, FileImage, FileSpreadsheet, FileText, GraduationCap, Hourglass, Link2, MessageSquareText, Plus, Search, Trash2, Upload, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { deleteTickets, setTicketStatus } from "@/app/(app)/tickets/actions";
@@ -53,7 +54,7 @@ const draftOf = (t: TicketRow, fallbackInstitution: string): Draft => ({
 export function StudentDesk({ tickets, institutions, event }: { tickets: TicketRow[]; institutions: InstitutionLite[]; event: TicketEvent }) {
   const { can } = useViewer();
   const manage = can("tickets.manage");
-  const router = useRouter();
+  const router = useNavRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 

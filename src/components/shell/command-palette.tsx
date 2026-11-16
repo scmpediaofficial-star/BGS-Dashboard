@@ -1,7 +1,7 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
 import { Dialog as RadixDialog } from "radix-ui";
 import { CornerDownLeft, Handshake, ListChecks, LoaderCircle, Mails, MicVocal, Newspaper, PenSquare, Plus, Search, SquarePen, UserPlus } from "lucide-react";
@@ -19,7 +19,7 @@ const row = "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-
 
 /** ⌘K / Ctrl+K: jump anywhere, start something new, or search every tracker. */
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const router = useRouter();
+  const router = useNavRouter();
   const { viewer, can } = useViewer();
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);

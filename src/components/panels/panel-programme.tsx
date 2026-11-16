@@ -1,7 +1,8 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { deleteQuestion, savePanel, saveQuestion } from "@/app/(app)/panels/actions";
 import { useViewer } from "@/components/shell/session-context";
@@ -20,7 +21,7 @@ const draftFrom = (p?: Panel): PanelDraft => ({ number: String(p?.number ?? ""),
 
 export function PanelProgramme({ panels, questions, speakers }: { panels: Panel[]; questions: Question[]; speakers: { panel_id: string; status: string }[] }) {
   const { can } = useViewer();
-  const router = useRouter(), pathname = usePathname(), params = useSearchParams();
+  const router = useNavRouter(), pathname = usePathname(), params = useSearchParams();
   const selectedId = params.get("panel"), creating = params.get("newpanel") === "1";
   const selected = panels.find((p) => p.id === selectedId);
   const [panelState, setPanelState] = useState<{ key: string; value: PanelDraft }>({ key: "", value: draftFrom() });

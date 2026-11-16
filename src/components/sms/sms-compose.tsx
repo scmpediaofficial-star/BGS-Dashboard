@@ -1,7 +1,7 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Download, FileUp, Search, Send, Users } from "lucide-react";
 import { toast } from "sonner";
 import { sendCampaign } from "@/app/(app)/sms/actions";
@@ -26,7 +26,7 @@ type SourceFilter = "all" | Source;
 type Props = { audience: Audience; sms: SmsSettings; balance: SmsBalance | null; ready: boolean; canSend: boolean; initialMessage?: string };
 
 export function SmsCompose({ audience, sms, balance, ready, canSend, initialMessage = "" }: Props) {
-  const router = useRouter();
+  const router = useNavRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState(initialMessage);
   const [groups, setGroups] = useState<Set<GroupKey>>(new Set());

@@ -1,8 +1,9 @@
 "use client";
 
+import { useNavRouter } from "@/lib/hooks/use-nav-router";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { CalendarDays, ChevronLeft, ChevronRight, ImageIcon, Inbox, PenSquare, Plus, Share2, Star } from "lucide-react";
 import { BrandIcon } from "@/components/social/brand-icon";
 import { useViewer } from "@/components/shell/session-context";
@@ -47,7 +48,7 @@ function Channels({ post, max = 4 }: { post: Post; max?: number }) {
 
 export function SocialView({ posts, channelCount, today, eventDay }: { posts: Post[]; channelCount: number; today: string; eventDay: string }) {
   const { can } = useViewer();
-  const router = useRouter();
+  const router = useNavRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   useRealtimeRefresh(["social_posts", "social_post_targets"]);
