@@ -1,5 +1,6 @@
 "use client";
 
+import { LinkPending } from "@/components/shell/nav-progress";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -54,6 +55,7 @@ export function MobileTabs({ badges }: { badges: NavBadges }) {
                   )}
                 </span>
                 {SHORT[cell.href] ?? cell.label}
+                <LinkPending className="absolute right-2 top-1.5 size-3 text-accent" />
               </Link>
             </li>
           );

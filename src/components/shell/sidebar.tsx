@@ -1,5 +1,6 @@
 "use client";
 
+import { LinkPending } from "@/components/shell/nav-progress";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -42,6 +43,7 @@ export function NavList({ badges, onNavigate }: { badges: NavBadges; onNavigate?
                       {active && <span aria-hidden className="absolute -left-3 top-2 bottom-2 w-1 rounded-r-full bg-gold" />}
                       <item.icon className={cn("size-[18px] shrink-0", active ? "text-gold" : "text-sidebar-ink-2 group-hover:text-white")} aria-hidden />
                       <span className="flex-1 truncate">{item.label}</span>
+                      <LinkPending className="text-gold" />
                       {count > 0 && item.badge && (
                         <span
                           className={cn(

@@ -337,3 +337,49 @@
 .recharts-cartesian-axis-line, .recharts-cartesian-axis-tick-line { stroke: var(--chart-axis); }
 .recharts-text { fill: var(--ink-3); font-size: 11px; font-variant-numeric: tabular-nums; }
 .recharts-wrapper:focus, .recharts-surface:focus, .recharts-wrapper *:focus { outline: none; }
+
+/* ── Navigation feedback ─────────────────────────────────────────────────── */
+.nav-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 80;
+  height: 3px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s 0.15s;
+}
+.nav-progress.is-active {
+  opacity: 1;
+  transition: none;
+}
+.nav-progress span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  border-radius: 0 3px 3px 0;
+}
+.nav-progress.is-active span {
+  animation: nav-progress 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
+}
+.nav-progress:not(.is-active) span {
+  width: 100%;
+}
+@keyframes nav-progress {
+  0% { width: 0; }
+  12% { width: 35%; }
+  40% { width: 70%; }
+  100% { width: 94%; }
+}
+html[data-navigating] { cursor: progress; }
+html[data-navigating] a, html[data-navigating] button { cursor: progress; }
+
+/* New page content eases in instead of popping. */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+}
+.page-enter > * { animation: page-enter 0.28s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .page-enter > *, .nav-progress.is-active span { animation: none; }
+}

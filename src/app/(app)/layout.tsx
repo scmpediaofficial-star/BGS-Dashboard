@@ -1,5 +1,6 @@
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { MobileTabs } from "@/components/shell/mobile-tabs";
+import { NavProgress } from "@/components/shell/nav-progress";
 import { OfflineBanner } from "@/components/shell/offline-banner";
 import { SessionProvider, type Viewer } from "@/components/shell/session-context";
 import { Sidebar, type NavBadges } from "@/components/shell/sidebar";
@@ -38,6 +39,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <SessionProvider viewer={viewer}>
+      <NavProgress />
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[70] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-fg">
         Skip to content
       </a>
@@ -45,7 +47,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <div className="flex min-h-dvh flex-col lg:pl-64">
         <OfflineBanner />
         <Topbar badges={badges} unread={unread.count ?? 0} daysToGo={daysUntil(event.starts_at)} eventLine={eventLine} />
-        <main id="main" className="mx-auto w-full max-w-[1500px] flex-1 px-4 pb-28 pt-5 sm:px-6 lg:px-8 lg:pb-12 lg:pt-7">
+        <main id="main" className="page-enter mx-auto w-full max-w-[1500px] flex-1 px-4 pb-28 pt-5 sm:px-6 lg:px-8 lg:pb-12 lg:pt-7">
           {children}
         </main>
       </div>
