@@ -9,9 +9,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { daysUntil, formatDate, formatMoney, isoDay, timeAgo, truncate } from "@/lib/utils";
 
 /** 06:00 Accra briefing. The email log makes retries safe within the same day. */
-export async function sendDailyBriefing(): Promise<{ recipients: number; sent: number; skipped: number; failed: number }> {
-  const db = createAdminClient();
+export async function sendDailyBriefing(): Promise<{ recipients: number; sent: number; skipped: number; failed: number; stopped?: string }> {
   const today = isoDay();
+  // The briefing follows the run-up to the summit. Once the summit day has passed nobody gets it,
+  // until Settings holds the date of a future summit.
+  const { event } = await getSettings();
+  if (event.starts_at && isoDay(event.starts_at) < today) {
+    return { recipients: 0, sent: 0, skipped: 0, failed: 0, stopped: "The summit has passed: no daily briefing until Settings holds a future summit date." };
+  }
+  const db = createAdminClient();
   const [profiles, overdue, deliverables, actions, approvals, sales, activity, logs, settings, brand] = await Promise.all([
     db.from("profiles").select("email, full_name, notification_prefs").eq("is_active", true),
     db.from("deliverables").select("id", { count: "exact", head: true }).neq("status", "completed").lt("due_date", today),
