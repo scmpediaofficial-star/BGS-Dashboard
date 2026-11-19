@@ -221,6 +221,7 @@ export type CertificateInput = {
   certificates: { name: string; code: string; fileName: string }[];
   /** A team test: says so at the top and in the subject. */ test?: boolean;
   /** A second send, for people who could not find the first: says so in the subject and opening line. */ resent?: boolean;
+  /** Replaces a certificate sent with a mistake in it: apologises, and says so in the subject. */ corrected?: boolean;
 };
 
 /** Sent to each attendee after the summit, with their certificate of attendance attached as a PDF. */
@@ -233,6 +234,7 @@ export function certificateEmail(input: CertificateInput): Rendered {
           <strong>Test for the BGS team.</strong> Every attendee will get exactly this email, with their own certificate attached. This copy is made out to you. If anything needs changing, reply before the certificates go out.
         </td></tr></table>`
     : "";
+  const apology = `We are sorry: the certificate${one ? "" : "s"} we sent you earlier had ${one ? "your name" : "a name"} spelt incorrectly. The corrected certificate${one ? " is" : "s are"} attached; please use ${one ? "it" : "them"} in place of the earlier one.`;
   const thanks = `Thank you for attending the ${input.brand.eventName} on ${input.dateLine} at the ${input.venueLine}. It was a pleasure to have you with us.`;
   const attached = one
     ? `Your certificate of attendance is attached to this email as a PDF (${one.fileName}). You can save it, print it or share it.`
@@ -244,7 +246,7 @@ export function certificateEmail(input: CertificateInput): Rendered {
     ? "If your name should be spelt differently, reply to this email with the correct spelling and we will send you a corrected certificate."
     : "If a name should be spelt differently, reply to this email with the correct spelling and we will send a corrected certificate.";
   return {
-    subject: `${input.test ? "[Test] " : ""}${one ? "Your certificate" : "Certificates"} of attendance — ${input.brand.eventName}${input.resent ? " (sent again)" : ""}`,
+    subject: `${input.test ? "[Test] " : ""}${input.corrected ? `Corrected certificate${one ? "" : "s"}` : one ? "Your certificate" : "Certificates"} of attendance — ${input.brand.eventName}${input.resent ? " (sent again)" : ""}`,
     html: layout({
       brand: input.brand,
       preheader: `${one ? "Your certificate" : "Certificates"} of attendance for the ${input.brand.eventName}${one ? " is" : " are"} attached.`,
@@ -254,6 +256,7 @@ export function certificateEmail(input: CertificateInput): Rendered {
       showPreferences: false,
       footerNote: `You are receiving this because you held a ticket for the ${input.brand.eventName}. Questions? Reply to this email or write to ${input.replyTo}.`,
       bodyHtml: `${test}${paragraph(one ? `Dear ${one.name},` : "Hello,")}
+        ${input.corrected ? paragraph(apology) : ""}
         ${input.resent ? paragraph(`We are sending your certificate${one ? "" : "s"} again in case our first email did not reach you. If you already have ${one ? "it" : "them"}, there is nothing more to do.`) : ""}
         ${paragraph(thanks)}
         ${paragraph(attached)}
@@ -264,6 +267,7 @@ export function certificateEmail(input: CertificateInput): Rendered {
     text: plain([
       input.test && "TEST FOR THE BGS TEAM: every attendee will get exactly this email, with their own certificate attached.\n",
       one ? `Dear ${one.name},` : "Hello,", "",
+      input.corrected && `${apology}\n`,
       input.resent && `We are sending your certificate${one ? "" : "s"} again in case our first email did not reach you. If you already have ${one ? "it" : "them"}, there is nothing more to do.\n`,
       thanks, "",
       attached, "",
