@@ -19,6 +19,9 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },
+      // boardroomgovsummit.com draws certificates in the browser with the summit logo, the convener's
+      // signature and institution logos served from here, so a canvas there may read them.
+      { source: "/brand/:path*", headers: [{ key: "Access-Control-Allow-Origin", value: "*" }] },
       {
         source: "/sw.js",
         headers: [
